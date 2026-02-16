@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -14,10 +14,12 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  Button,
 } from '@mui/material';
-import { Search as SearchIcon, Delete as DeleteIcon, OpenInNew as OpenIcon } from '@mui/icons-material';
+import { Search as SearchIcon, Delete as DeleteIcon, OpenInNew as OpenIcon, Add as AddIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../api/client';
+import { CreateServerDialog } from './CreateServerDialog';
 
 interface Server {
   uuid: string;
@@ -34,10 +36,15 @@ export function ServersPage() {
   const navigate = useNavigate();
   const [servers, setServers] = useState<Server[]>([]);
   const [search, setSearch] = useState('');
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  useEffect(() => {
+  const fetchServers = useCallback(() => {
     apiClient.get('/admin/servers').then(({ data }) => setServers(data.data || [])).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    fetchServers();
+  }, [fetchServers]);
 
   const filtered = servers.filter(
     (s) => s.name.toLowerCase().includes(search.toLowerCase()) || s.user.email.includes(search.toLowerCase()),
@@ -47,13 +54,22 @@ export function ServersPage() {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h5" fontWeight={700}>All Servers</Typography>
-        <TextField
-          placeholder="Search servers..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
-          sx={{ width: 280 }}
-        />
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <TextField
+            placeholder="Search servers..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
+            sx={{ width: 280 }}
+          />
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setCreateDialogOpen(true)}
+          >
+            Create Server
+          </Button>
+        </Box>
       </Box>
 
       <Card>
@@ -103,6 +119,12 @@ export function ServersPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <CreateServerDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onCreated={fetchServers}
+      />
     </Box>
   );
 }
