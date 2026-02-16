@@ -1,0 +1,20 @@
+[panel]
+url = "http://localhost:3000"
+token_id = "your-token-id-here"
+token = "your-daemon-token-here"
+
+[api]
+host = "0.0.0.0"
+port = 8080
+# tls_cert = "/etc/nexus-wings/cert.pem"
+# tls_key = "/etc/nexus-wings/key.pem"
+
+[docker]
+socket = "/var/run/docker.sock"
+
+[storage]
+data_dir = "/var/lib/nexus-wings/data"
+
+[logging]
+level = "info"
+# file = "/var/log/nexus-wings/wings.log"

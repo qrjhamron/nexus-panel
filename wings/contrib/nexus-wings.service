@@ -1,0 +1,16 @@
+[Unit]
+Description=Nexus Wings — Server daemon for Nexus Panel
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=nexus-wings
+ExecStart=/usr/local/bin/nexus-wings
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=Nexus Wings Daemon
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/nexus-wings
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nexus-wings
+
+[Install]
+WantedBy=multi-user.target

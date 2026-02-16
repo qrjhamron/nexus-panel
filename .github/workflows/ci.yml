@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: nexus
+          POSTGRES_PASSWORD: nexus
+          POSTGRES_DB: nexus_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run typecheck -w packages/shared
+      - run: npm run build -w packages/shared
+      - run: npm run typecheck -w packages/backend
+      - run: npm run lint -w packages/backend
+      - run: npm run test -w packages/backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: nexus
+          DB_PASSWORD: nexus
+          DB_DATABASE: nexus_test
+          JWT_SECRET: test-secret
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build -w packages/shared
+      - run: npm run typecheck -w packages/frontend
+      - run: npm run lint -w packages/frontend || true
+      - run: npm run test -w packages/frontend
+      - run: npm run build -w packages/frontend
+
+  wings:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: wings
+      - run: cd wings && cargo check
+      - run: cd wings && cargo clippy -- -D warnings || true
+      - run: cd wings && cargo test

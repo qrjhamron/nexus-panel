@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # ── PostgreSQL 16 ────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-nexus}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-nexus}
+      POSTGRES_DB: ${DB_DATABASE:-nexus}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-nexus} -d ${DB_DATABASE:-nexus}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - nexus-internal
+
+  # ── Panel Backend ────────────────────────────────────────────────
+  panel:
+    build:
+      context: .
+      dockerfile: Dockerfile.panel
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-nexus}
+      DB_PASSWORD: ${DB_PASSWORD:-nexus}
+      DB_DATABASE: ${DB_DATABASE:-nexus}
+      JWT_SECRET: ${JWT_SECRET:-nexus-dev-secret-change-in-production}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      NODE_ENV: ${NODE_ENV:-development}
+    ports:
+      - "${PANEL_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - nexus-internal
+
+  # ── Frontend ─────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      panel:
+        condition: service_healthy
+    networks:
+      - nexus-internal
+
+  # ── Wings ────────────────────────────────────────────────────────
+  wings:
+    build:
+      context: ./wings
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      WINGS_CONFIG: /etc/nexus-wings/config.toml
+    ports:
+      - "${WINGS_PORT:-8080}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - wings_data:/var/lib/nexus-wings/data
+      - wings_config:/etc/nexus-wings
+    depends_on:
+      panel:
+        condition: service_healthy
+    networks:
+      - nexus-internal
+
+# ── Volumes ──────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  wings_data:
+    driver: local
+  wings_config:
+    driver: local
+
+# ── Networks ─────────────────────────────────────────────────────────
+networks:
+  nexus-internal:
+    driver: bridge

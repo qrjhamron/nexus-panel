@@ -1,0 +1,34 @@
+{
+  "name": "nexus-panel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nexus Panel — Modern server management panel",
+  "license": "MIT",
+  "workspaces": [
+    "packages/shared",
+    "packages/backend",
+    "packages/frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run dev -w packages/backend",
+    "dev:frontend": "npm run dev -w packages/frontend",
+    "build": "npm run build -w packages/shared && npm run build -w packages/backend && npm run build -w packages/frontend",
+    "build:shared": "npm run build -w packages/shared",
+    "build:backend": "npm run build -w packages/backend",
+    "build:frontend": "npm run build -w packages/frontend",
+    "test": "npm run test -w packages/backend && npm run test -w packages/frontend",
+    "test:backend": "npm run test -w packages/backend",
+    "test:frontend": "npm run test -w packages/frontend",
+    "lint": "npm run lint -w packages/backend && npm run lint -w packages/frontend",
+    "typecheck": "npm run typecheck -w packages/shared && npm run typecheck -w packages/backend && npm run typecheck -w packages/frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
