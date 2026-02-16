@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { SseService } from './sse.service';
 
-@Controller('api/v1/sse')
+@Controller('sse')
 export class SseController {
   constructor(private readonly sseService: SseService) {}
 

@@ -4,6 +4,18 @@ import { UserEntity } from './entities/user.entity';
 import { NestEntity } from './entities/nest.entity';
 import { EggEntity } from './entities/egg.entity';
 import { EggVariableEntity } from './entities/egg-variable.entity';
+import { ServerEntity } from './entities/server.entity';
+import { SessionEntity } from './entities/session.entity';
+import { ApiKeyEntity } from './entities/api-key.entity';
+import { NotificationEntity } from './entities/notification.entity';
+import { NodeEntity } from './entities/node.entity';
+import { AllocationEntity } from './entities/allocation.entity';
+import { ServerSubuserEntity } from './entities/server-subuser.entity';
+import { ServerDatabaseEntity } from './entities/server-database.entity';
+import { DatabaseHostEntity } from './entities/database-host.entity';
+import { ScheduleEntity } from './entities/schedule.entity';
+import { ScheduleTaskEntity } from './entities/schedule-task.entity';
+import { AuditLogEntity } from './entities/audit-log.entity';
 
 async function seed() {
   const dataSource = new DataSource({
@@ -13,7 +25,13 @@ async function seed() {
     username: process.env.DB_USERNAME || 'nexus',
     password: process.env.DB_PASSWORD || 'nexus',
     database: process.env.DB_DATABASE || 'nexus',
-    entities: [UserEntity, NestEntity, EggEntity, EggVariableEntity],
+    entities: [
+      UserEntity, SessionEntity, ApiKeyEntity, NotificationEntity,
+      NodeEntity, AllocationEntity,
+      NestEntity, EggEntity, EggVariableEntity,
+      ServerEntity, ServerSubuserEntity, ServerDatabaseEntity,
+      DatabaseHostEntity, ScheduleEntity, ScheduleTaskEntity, AuditLogEntity,
+    ],
     synchronize: true,
   });
 

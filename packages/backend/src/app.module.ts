@@ -27,6 +27,7 @@ import { SseModule } from './sse/sse.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['.env', '../../.env'],
       validationSchema: Joi.object({
         DB_HOST: Joi.string().default('localhost'),
         DB_PORT: Joi.number().default(5432),
