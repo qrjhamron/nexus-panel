@@ -54,11 +54,10 @@ export class NodesService {
   async create(dto: CreateNodeDto) {
     const daemonTokenId = randomBytes(8).toString('hex');
     const daemonTokenPlain = uuidv4();
-    const daemonTokenHash = await bcrypt.hash(daemonTokenPlain, 12);
     const node = this.nodeRepo.create({
       ...dto,
       daemonTokenId,
-      daemonToken: daemonTokenHash,
+      daemonToken: daemonTokenPlain,
     });
     const saved = await this.nodeRepo.save(node);
     return {
@@ -156,11 +155,10 @@ export class NodesService {
 
     const daemonTokenId = randomBytes(8).toString('hex');
     const daemonTokenPlain = uuidv4();
-    const daemonTokenHash = await bcrypt.hash(daemonTokenPlain, 12);
 
     await this.nodeRepo.update(id, {
       daemonTokenId,
-      daemonToken: daemonTokenHash,
+      daemonToken: daemonTokenPlain,
     });
 
     return {

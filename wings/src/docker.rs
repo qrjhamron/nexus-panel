@@ -110,8 +110,8 @@ impl DockerManager {
             .collect();
 
         let host_config = HostConfig {
-            memory: Some(config.memory_limit as i64),
-            nano_cpus: Some(config.cpu_limit as i64),
+            memory: Some((config.memory_limit * 1024 * 1024) as i64),
+            nano_cpus: Some((config.cpu_limit * 10_000_000) as i64),
             port_bindings: Some(port_bindings),
             binds: Some(vec![format!("{}:/server", config.volume_path)]),
             ..Default::default()

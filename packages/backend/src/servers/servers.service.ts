@@ -178,10 +178,7 @@ export class ServersService {
     // 9. Determine image
     const image = dto.image || egg.dockerImage;
 
-    // 10. Assign allocation
-    await this.allocationRepo.update(dto.allocationId, { serverId: '__pending__' });
-
-    // 11. Create server record
+    // 10-11. Create server record, then assign allocation
     let saved: ServerEntity;
     try {
       const server = this.serverRepo.create({
@@ -194,12 +191,10 @@ export class ServersService {
       });
       saved = await this.serverRepo.save(server);
     } catch (error) {
-      // Rollback allocation assignment
-      await this.allocationRepo.update(dto.allocationId, { serverId: undefined as any });
       throw error;
     }
 
-    // Update allocation with actual server id
+    // Assign allocation to server
     await this.allocationRepo.update(dto.allocationId, { serverId: saved.id });
 
     const fullServer = await this.findById(saved.id);
@@ -231,7 +226,7 @@ export class ServersService {
     } catch (error: any) {
       this.logger.error(`Failed to create server on Wings: ${error?.message}`);
       // Rollback: remove server record and unassign allocation
-      await this.allocationRepo.update(dto.allocationId, { serverId: undefined as any });
+      await this.allocationRepo.update(dto.allocationId, { serverId: null as any });
       await this.serverRepo.remove(saved);
       throw new BadRequestException(`Failed to create server on Wings: ${error?.message}`);
     }

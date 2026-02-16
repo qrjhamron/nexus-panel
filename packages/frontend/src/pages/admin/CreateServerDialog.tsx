@@ -233,7 +233,7 @@ export function CreateServerDialog({ open, onClose, onCreated }: CreateServerDia
         setEnvValues((prev) => {
           const merged = { ...defaults };
           for (const key of Object.keys(prev)) {
-            if (key in merged) merged[key] = prev[key];
+            if (key in merged) merged[key] = prev[key] ?? '';
           }
           return merged;
         });

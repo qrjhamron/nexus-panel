@@ -38,6 +38,11 @@ export class SpaFallbackFilter implements ExceptionFilter {
       );
     }
 
+    // For non-HTTP exceptions (real errors), log the stack trace
+    if (!(exception instanceof HttpException)) {
+      console.error('Unhandled exception:', exception);
+    }
+
     // For all other exceptions, return JSON error
     let message = 'Internal server error';
     if (exception instanceof HttpException) {

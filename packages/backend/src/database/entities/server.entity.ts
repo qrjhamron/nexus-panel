@@ -107,8 +107,13 @@ export class ServerEntity {
 
   @BeforeInsert()
   generateUuidShort() {
-    if (this.uuid && !this.uuidShort) {
-      this.uuidShort = this.uuid.replace(/-/g, '').substring(0, 8);
+    if (!this.uuidShort) {
+      // Generate a random 8-char hex string since uuid may not be set yet
+      if (this.uuid) {
+        this.uuidShort = this.uuid.replace(/-/g, '').substring(0, 8);
+      } else {
+        this.uuidShort = require('crypto').randomBytes(4).toString('hex');
+      }
     }
   }
 

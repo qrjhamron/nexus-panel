@@ -40,8 +40,7 @@ export class DaemonTokenGuard implements CanActivate {
       throw new UnauthorizedException('Invalid daemon token');
     }
 
-    const isValid = await bcrypt.compare(token, node.daemonToken);
-    if (!isValid) {
+    if (token !== node.daemonToken) {
       throw new UnauthorizedException('Invalid daemon token');
     }
 
