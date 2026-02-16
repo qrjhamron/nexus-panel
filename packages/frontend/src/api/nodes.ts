@@ -11,4 +11,6 @@ export const nodesApi = {
   getAllocations: (id: string | number) => apiClient.get(`/admin/nodes/${id}/allocations`),
   createAllocation: (id: string | number, data: Record<string, unknown>) =>
     apiClient.post(`/admin/nodes/${id}/allocations`, data),
+  deleteAllocation: (nodeId: string | number, allocationId: string | number) =>
+    apiClient.delete(`/admin/nodes/${nodeId}/allocations/${allocationId}`),
 };

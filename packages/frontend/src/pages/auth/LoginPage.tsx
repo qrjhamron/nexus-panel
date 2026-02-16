@@ -10,17 +10,17 @@ import {
   Button,
   Typography,
   Link as MuiLink,
-  Alert,
   Collapse,
   InputAdornment,
   IconButton,
+  CircularProgress,
 } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { Visibility, VisibilityOff, ErrorOutline } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/auth.store';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email'),
+  email: z.string().min(1, 'Email or username is required'),
   password: z.string().min(1, 'Password is required'),
   twoFactorCode: z.string().optional(),
 });
@@ -43,7 +43,13 @@ export function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const result = await login(values);
+      const identifier = values.email;
+      const isEmail = identifier.includes('@');
+      const result = await login({
+        ...(isEmail ? { email: identifier } : { username: identifier }),
+        password: values.password,
+        twoFactorCode: values.twoFactorCode,
+      });
       if (result.requiresTwoFactor) {
         setNeeds2FA(true);
       } else {
@@ -55,6 +61,10 @@ export function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const clearError = () => {
+    if (error) setError('');
   };
 
   return (
@@ -89,27 +99,25 @@ export function LoginPage() {
               N
             </Box>
             <Typography variant="h5" fontWeight={700}>
-              Welcome back
+              NEXUS
             </Typography>
             <Typography variant="body2" color="text.secondary" mt={0.5}>
-              Sign in to Nexus Panel
+              Sign in to your account
             </Typography>
           </Box>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
           <form onSubmit={handleSubmit(onSubmit)}>
             <TextField
-              label="Email"
+              label="Email or Username"
               fullWidth
               autoComplete="email"
               error={!!errors.email}
               helperText={errors.email?.message}
               {...register('email')}
+              onChange={(e) => {
+                register('email').onChange(e);
+                clearError();
+              }}
               sx={{ mb: 2 }}
             />
             <TextField
@@ -120,6 +128,10 @@ export function LoginPage() {
               error={!!errors.password}
               helperText={errors.password?.message}
               {...register('password')}
+              onChange={(e) => {
+                register('password').onChange(e);
+                clearError();
+              }}
               slotProps={{
                 input: {
                   endAdornment: (
@@ -145,6 +157,24 @@ export function LoginPage() {
               />
             </Collapse>
 
+            {error && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  mb: 2,
+                  p: 1.5,
+                  borderRadius: 1,
+                  bgcolor: 'error.main',
+                  color: 'error.contrastText',
+                }}
+              >
+                <ErrorOutline fontSize="small" />
+                <Typography variant="body2">{error}</Typography>
+              </Box>
+            )}
+
             <Button
               type="submit"
               variant="contained"
@@ -153,7 +183,7 @@ export function LoginPage() {
               disabled={loading}
               sx={{ mb: 2, py: 1.2 }}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
             </Button>
 
             <Typography variant="body2" textAlign="center" color="text.secondary">

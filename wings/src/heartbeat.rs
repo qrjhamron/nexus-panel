@@ -6,14 +6,15 @@ use tokio::time::{self, Duration};
 use crate::state::AppState;
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct HeartbeatPayload {
     version: String,
-    memory_total: u64,
-    memory_used: u64,
-    disk_total: u64,
-    disk_used: u64,
-    cpu_usage: f64,
-    server_states: Vec<ServerState>,
+    total_memory: u64,
+    used_memory: u64,
+    total_disk: u64,
+    used_disk: u64,
+    cpu_percent: f64,
+    servers: Vec<ServerState>,
 }
 
 #[derive(Debug, Serialize)]
@@ -28,6 +29,9 @@ pub fn start(state: Arc<AppState>, shutdown: tokio::sync::watch::Receiver<()>) {
 }
 
 async fn run_heartbeat_loop(state: Arc<AppState>, mut shutdown: tokio::sync::watch::Receiver<()>) {
+    // Mark initial value as seen so changed() waits for actual shutdown signal
+    let _ = *shutdown.borrow_and_update();
+
     let mut interval = time::interval(Duration::from_secs(30));
     let client = reqwest::Client::new();
 
@@ -57,12 +61,12 @@ async fn send_heartbeat(client: &reqwest::Client, state: &AppState) -> anyhow::R
 
     let payload = HeartbeatPayload {
         version: env!("CARGO_PKG_VERSION").to_string(),
-        memory_total: mem_total,
-        memory_used: mem_used,
-        disk_total,
-        disk_used,
-        cpu_usage,
-        server_states: Vec::new(),
+        total_memory: mem_total,
+        used_memory: mem_used,
+        total_disk: disk_total,
+        used_disk: disk_used,
+        cpu_percent: cpu_usage,
+        servers: Vec::new(),
     };
 
     client

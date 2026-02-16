@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { authApi, type LoginPayload, type RegisterPayload } from '../api/auth';
-import { setAccessToken } from '../api/client';
 
 interface User {
   id: string;
@@ -20,12 +19,11 @@ interface AuthState {
   login: (payload: LoginPayload) => Promise<{ requiresTwoFactor?: boolean }>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
-  refreshToken: () => Promise<void>;
   checkAuth: () => Promise<void>;
   setUser: (user: User | null) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
@@ -36,35 +34,20 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (result.requiresTwoFactor) {
       return { requiresTwoFactor: true };
     }
-    setAccessToken(result.accessToken);
-    set({ user: result.user, isAuthenticated: true });
+    // Cookie is set by the backend — fetch user data
+    await get().checkAuth();
     return {};
   },
 
   register: async (payload) => {
-    const { data } = await authApi.register(payload);
-    const result = data.data || data;
-    setAccessToken(result.accessToken);
-    set({ user: result.user, isAuthenticated: true });
+    await authApi.register(payload);
+    await get().checkAuth();
   },
 
   logout: async () => {
     try {
       await authApi.logout();
     } finally {
-      setAccessToken(null);
-      set({ user: null, isAuthenticated: false });
-    }
-  },
-
-  refreshToken: async () => {
-    try {
-      const { data } = await authApi.refresh();
-      const result = data.data || data;
-      setAccessToken(result.accessToken);
-      set({ user: result.user, isAuthenticated: true });
-    } catch {
-      setAccessToken(null);
       set({ user: null, isAuthenticated: false });
     }
   },

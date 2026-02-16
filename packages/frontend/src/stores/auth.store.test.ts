@@ -5,13 +5,12 @@ vi.mock('../api/auth', () => ({
     login: vi.fn(),
     register: vi.fn(),
     logout: vi.fn(),
-    refresh: vi.fn(),
     me: vi.fn(),
   },
 }));
 
 vi.mock('../api/client', () => ({
-  setAccessToken: vi.fn(),
+  default: {},
 }));
 
 describe('auth store', () => {

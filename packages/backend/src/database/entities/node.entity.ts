@@ -5,10 +5,13 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { NodeConnectionStatus } from '@nexus/shared';
 import { AllocationEntity } from './allocation.entity';
 import { ServerEntity } from './server.entity';
+import { LocationEntity } from './location.entity';
 
 @Entity('nodes')
 export class NodeEntity {
@@ -23,6 +26,9 @@ export class NodeEntity {
 
   @Column()
   location: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  locationId?: string;
 
   @Column()
   fqdn: string;
@@ -78,4 +84,8 @@ export class NodeEntity {
 
   @OneToMany(() => ServerEntity, (server) => server.node)
   servers: ServerEntity[];
+
+  @ManyToOne(() => LocationEntity, (loc) => loc.nodes, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'locationId' })
+  locationEntity: LocationEntity;
 }

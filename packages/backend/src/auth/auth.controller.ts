@@ -10,10 +10,12 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Request, Response } from 'express';
+import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto, TwoFactorVerifyDto, TwoFactorLoginDto } from './dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -21,7 +23,10 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
@@ -50,6 +55,18 @@ export class AuthController {
         path: '/',
       });
 
+      // Set nexus_session cookie with the access token
+      if ('accessToken' in result) {
+        const isSecure = req.protocol === 'https';
+        res.cookie('nexus_session', result.accessToken, {
+          httpOnly: true,
+          sameSite: 'strict',
+          secure: isSecure,
+          path: '/',
+          maxAge: 15 * 60 * 1000, // 15 min
+        });
+      }
+
       const { refreshToken, ...body } = result;
       return body;
     }
@@ -60,28 +77,85 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
-  async refresh(@Req() req: Request) {
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const token = req.cookies?.refreshToken;
     if (!token) {
       return { statusCode: 401, message: 'No refresh token provided' };
     }
-    return this.authService.refreshToken(token);
+    const result = await this.authService.refreshToken(token);
+
+    // Also refresh the nexus_session cookie
+    const isSecure = req.protocol === 'https';
+    res.cookie('nexus_session', result.accessToken, {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: isSecure,
+      path: '/',
+      maxAge: 15 * 60 * 1000,
+    });
+
+    return result;
   }
 
   @Post('logout')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout and revoke session' })
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const token = req.cookies?.refreshToken;
     if (token) {
-      // Find session by refresh token and revoke
-      const { sessionRepo } = this.authService as any;
-      // We keep it simple - clear the cookie
       res.clearCookie('refreshToken', { path: '/' });
     }
-    return { message: 'Logged out successfully' };
+    // Clear nexus_session cookie
+    res.clearCookie('nexus_session', {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: req.protocol === 'https',
+      path: '/',
+      maxAge: 0,
+    });
+  }
+
+  @Get('me')
+  @ApiOperation({ summary: 'Get current user from JWT' })
+  async me(@Req() req: Request) {
+    // Read JWT from nexus_session cookie or Authorization header
+    let token: string | undefined;
+    if (req.cookies?.nexus_session) {
+      token = req.cookies.nexus_session;
+    } else {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.slice(7);
+      }
+    }
+
+    if (!token) {
+      throw new UnauthorizedException('No token provided');
+    }
+
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(token);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    const user = await this.authService.validateUser(payload.sub);
+    if (!user) {
+      throw new UnauthorizedException('User not found or disabled');
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      rootAdmin: user.rootAdmin,
+      usesTotp: user.usesTotp,
+      avatarUrl: user.avatarUrl,
+      createdAt: user.createdAt,
+    };
   }
 
   @Post('2fa/setup')
@@ -137,6 +211,16 @@ export class AuthController {
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/',
+    });
+
+    // Set nexus_session cookie
+    const isSecure = req.protocol === 'https';
+    res.cookie('nexus_session', result.accessToken, {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: isSecure,
+      path: '/',
+      maxAge: 15 * 60 * 1000,
     });
 
     const { refreshToken, ...body } = result;

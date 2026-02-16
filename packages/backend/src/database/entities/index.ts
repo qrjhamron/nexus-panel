@@ -2,6 +2,7 @@ export { UserEntity } from './user.entity';
 export { SessionEntity } from './session.entity';
 export { NodeEntity } from './node.entity';
 export { AllocationEntity } from './allocation.entity';
+export { LocationEntity } from './location.entity';
 export { NestEntity } from './nest.entity';
 export { EggEntity } from './egg.entity';
 export { EggVariableEntity } from './egg-variable.entity';

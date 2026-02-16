@@ -21,6 +21,7 @@ import { ApiKeysPage } from './pages/account/ApiKeysPage';
 import { SessionsPage } from './pages/account/SessionsPage';
 
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
+import { LocationsPage } from './pages/admin/LocationsPage';
 import { NodesPage } from './pages/admin/NodesPage';
 import { ServersPage as AdminServersPage } from './pages/admin/ServersPage';
 import { UsersPage } from './pages/admin/UsersPage';
@@ -79,6 +80,7 @@ export const router = createBrowserRouter([
                 children: [
                   { index: true, element: <Navigate to="dashboard" replace /> },
                   { path: 'dashboard', element: <AdminDashboardPage /> },
+                  { path: 'locations', element: <LocationsPage /> },
                   { path: 'nodes', element: <NodesPage /> },
                   { path: 'nodes/:id', element: <NodesPage /> },
                   { path: 'servers', element: <AdminServersPage /> },

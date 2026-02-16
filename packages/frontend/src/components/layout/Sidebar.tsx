@@ -12,6 +12,7 @@ import {
   useMediaQuery,
   useTheme,
   Tooltip,
+  IconButton,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -30,6 +31,9 @@ import {
   Devices as SessionsIcon,
   ReceiptLong as AuditIcon,
   Person as AccountIcon,
+  Logout as LogoutIcon,
+  DnsOutlined as ServersIcon,
+  LocationOn as LocationIcon,
 } from '@mui/icons-material';
 import { useAuthStore } from '../../stores/auth.store';
 
@@ -54,11 +58,14 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { uuid } = useParams<{ uuid: string }>();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
 
   const isServerPage = location.pathname.startsWith('/server/') && uuid;
 
-  const mainNav: NavItem[] = [{ label: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' }];
+  const mainNav: NavItem[] = [
+    { label: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+    { label: 'My Servers', icon: <ServersIcon />, path: '/dashboard' },
+  ];
 
   const serverNav: NavItem[] = uuid
     ? [
@@ -80,7 +87,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const adminNav: NavItem[] = user?.isAdmin
     ? [
-        { label: 'Dashboard', icon: <AdminIcon />, path: '/admin/dashboard' },
+        { label: 'Overview', icon: <AdminIcon />, path: '/admin/dashboard' },
+        { label: 'Locations', icon: <LocationIcon />, path: '/admin/locations' },
         { label: 'Nodes', icon: <NodesIcon />, path: '/admin/nodes' },
         { label: 'Servers', icon: <DashboardIcon />, path: '/admin/servers' },
         { label: 'Users', icon: <UsersIcon />, path: '/admin/users' },
@@ -95,6 +103,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const handleNavigate = (path: string) => {
     navigate(path);
     if (!isDesktop) onClose();
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
   const renderSection = (title: string, items: NavItem[]) => {
@@ -194,7 +207,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         {renderSection('Main', mainNav)}
         {isServerPage && renderSection('Server', serverNav)}
         {renderSection('Account', accountNav)}
-        {adminNav.length > 0 && renderSection('Admin', adminNav)}
+        {adminNav.length > 0 && renderSection('Administration', adminNav)}
       </Box>
 
       <Divider sx={{ mx: collapsed ? 1 : 2 }} />
@@ -206,7 +219,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           {user?.username?.charAt(0).toUpperCase()}
         </Avatar>
         {!collapsed && (
-          <Box overflow="hidden">
+          <Box overflow="hidden" sx={{ flex: 1 }}>
             <Typography variant="body2" fontWeight={600} noWrap>
               {user?.username}
             </Typography>
@@ -215,6 +228,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             </Typography>
           </Box>
         )}
+        <Tooltip title="Logout">
+          <IconButton size="small" onClick={handleLogout} sx={{ color: 'text.secondary' }}>
+            <LogoutIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </Box>
     </Box>
   );

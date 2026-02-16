@@ -22,6 +22,8 @@ import { WingsModule } from './wings/wings.module';
 import { WebSocketModule } from './websocket/websocket.module';
 import { AdminModule } from './admin/admin.module';
 import { SseModule } from './sse/sse.module';
+import { HealthModule } from './health/health.module';
+import { LocationsModule } from './locations/locations.module';
 
 @Module({
   imports: [
@@ -79,6 +81,8 @@ import { SseModule } from './sse/sse.module';
     WebSocketModule,
     AdminModule,
     SseModule,
+    HealthModule,
+    LocationsModule,
   ],
 })
 export class AppModule {}

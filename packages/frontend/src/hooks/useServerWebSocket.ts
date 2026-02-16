@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import { getAccessToken } from '../api/client';
 
 interface ServerStats {
   cpuPercent: number;
@@ -37,13 +36,12 @@ export function useServerWebSocket(serverUuid: string): UseServerWebSocketReturn
 
   useEffect(() => {
     const wsUrl = import.meta.env.VITE_WS_URL || window.location.origin;
-    const token = getAccessToken();
 
     const socket = io(wsUrl, {
       path: '/ws',
-      auth: { token },
       query: { server: serverUuid },
       transports: ['websocket'],
+      withCredentials: true,
       reconnection: false,
     });
 

@@ -1,17 +1,19 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
-import { join } from 'path';
+import { join, resolve } from 'path';
+import { existsSync } from 'fs';
 import { AppModule } from './app.module';
+import { SpaFallbackFilter } from './common/filters/spa-fallback.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.use(cookieParser());
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: true,
     credentials: true,
   });
 
@@ -23,7 +25,10 @@ async function bootstrap() {
     }),
   );
 
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', { exclude: [{ path: 'health', method: RequestMethod.GET }] });
+
+  // SPA fallback for non-API 404s
+  app.useGlobalFilters(new SpaFallbackFilter());
 
   const config = new DocumentBuilder()
     .setTitle('Nexus Panel API')
@@ -36,7 +41,15 @@ async function bootstrap() {
 
   // Serve frontend static files
   const frontendPath = join(__dirname, '..', '..', 'frontend', 'dist');
-  app.useStaticAssets(frontendPath);
+  const indexPath = resolve(frontendPath, 'index.html');
+  const frontendBuilt = existsSync(indexPath);
+  if (!frontendBuilt) {
+    console.warn('WARNING: Frontend build not found at ' + indexPath + '. Run: cd packages/frontend && npm run build');
+  }
+
+  if (frontendBuilt) {
+    app.useStaticAssets(frontendPath);
+  }
 
   const host = process.env.HOST || '0.0.0.0';
   const port = process.env.PORT || 3000;
