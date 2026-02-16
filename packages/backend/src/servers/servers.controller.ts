@@ -24,7 +24,6 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { DaemonTokenGuard } from '../common/guards/daemon-token.guard';
 
 @ApiTags('servers')
 @ApiBearerAuth()
@@ -147,14 +146,4 @@ export class ServersController {
     return this.serversService.reinstall(server.id);
   }
 
-  @Post(':uuid/install-status')
-  @UseGuards(DaemonTokenGuard)
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Receive install status callback from Wings' })
-  async installStatus(
-    @Param('uuid') uuid: string,
-    @Body() body: { status: string; message?: string },
-  ) {
-    return this.serversService.updateInstallStatus(uuid, body.status, body.message);
-  }
 }

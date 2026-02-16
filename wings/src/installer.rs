@@ -2,6 +2,7 @@ use bollard::container::{
     Config as ContainerConfig, CreateContainerOptions, LogOutput, LogsOptions,
     RemoveContainerOptions, StartContainerOptions, WaitContainerOptions,
 };
+use bollard::image::CreateImageOptions;
 use bollard::models::HostConfig;
 use futures_util::StreamExt;
 
@@ -39,6 +40,23 @@ pub async fn run_install(
 
     // Access the inner Docker client via a helper
     let client = docker.client();
+
+    // Pull install image first
+    tracing::info!("Pulling install image: {install_image}");
+    let mut pull_stream = client.create_image(
+        Some(CreateImageOptions {
+            from_image: install_image.to_string(),
+            ..Default::default()
+        }),
+        None,
+        None,
+    );
+    while let Some(result) = pull_stream.next().await {
+        if let Err(e) = result {
+            tracing::error!("Failed to pull install image {install_image}: {e}");
+            return Err(WingsError::Docker(e));
+        }
+    }
 
     // Clean up any leftover container
     let _ = client

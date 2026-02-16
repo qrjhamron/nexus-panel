@@ -8,6 +8,7 @@ import { NodeEntity } from '../database/entities/node.entity';
 import { UserEntity } from '../database/entities/user.entity';
 import { ServersService } from './servers.service';
 import { ServersController } from './servers.controller';
+import { ServerCallbacksController } from './server-callbacks.controller';
 import { NodesModule } from '../nodes/nodes.module';
 import { DaemonTokenGuard } from '../common/guards/daemon-token.guard';
 
@@ -23,7 +24,7 @@ import { DaemonTokenGuard } from '../common/guards/daemon-token.guard';
     ]),
     NodesModule,
   ],
-  controllers: [ServersController],
+  controllers: [ServersController, ServerCallbacksController],
   providers: [ServersService, DaemonTokenGuard],
   exports: [ServersService],
 })

@@ -82,15 +82,15 @@ export class CreateServerDto {
   @IsOptional()
   oomDisabled?: boolean;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  startup: string;
+  startup?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  image: string;
+  image?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
