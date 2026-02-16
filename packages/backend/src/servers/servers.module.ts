@@ -9,6 +9,7 @@ import { UserEntity } from '../database/entities/user.entity';
 import { ServersService } from './servers.service';
 import { ServersController } from './servers.controller';
 import { NodesModule } from '../nodes/nodes.module';
+import { DaemonTokenGuard } from '../common/guards/daemon-token.guard';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { NodesModule } from '../nodes/nodes.module';
     NodesModule,
   ],
   controllers: [ServersController],
-  providers: [ServersService],
+  providers: [ServersService, DaemonTokenGuard],
   exports: [ServersService],
 })
 export class ServersModule {}

@@ -66,11 +66,18 @@ export class AdminNodesController {
         const serverCount = await this.serverRepo.count({ where: { nodeId: node.id } });
         const allocCount = node.allocations ? node.allocations.length : 0;
         const online = this.heartbeatStore.isOnline(node.id);
+        const heartbeat = this.heartbeatStore.get(node.id);
         return {
           ...node,
           serverCount,
           allocationCount: allocCount,
           online,
+          memoryUsed: heartbeat?.usedMemory ?? null,
+          memoryTotal: heartbeat?.totalMemory ?? null,
+          diskUsed: heartbeat?.usedDisk ?? null,
+          diskTotal: heartbeat?.totalDisk ?? null,
+          cpuUsage: heartbeat?.cpuPercent ?? null,
+          lastHeartbeat: heartbeat?.receivedAt ?? null,
         };
       }),
     );

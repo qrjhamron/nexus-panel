@@ -77,7 +77,10 @@ pub async fn create_server(
 
     // Run install script if provided
     if let (Some(script), Some(image)) = (body.install_script, body.install_docker_image) {
-        match installer::run_install(&state.docker, &config, &script, &image).await {
+        let panel_url = Some(state.config.panel.url.as_str());
+        let panel_auth_str = format!("{}.{}", state.config.panel.token_id, state.config.panel.token);
+        let panel_auth = Some(panel_auth_str.as_str());
+        match installer::run_install(&state.docker, &config, &script, &image, panel_url, panel_auth).await {
             Ok(output) => {
                 tracing::info!("Install script completed for {}: {} lines", config.uuid, output.len());
             }
@@ -192,11 +195,17 @@ pub async fn install_server(
         volume_path: server_dir.to_string_lossy().to_string(),
     });
 
+    let panel_url = Some(state.config.panel.url.as_str());
+    let panel_auth_str = format!("{}.{}", state.config.panel.token_id, state.config.panel.token);
+    let panel_auth = Some(panel_auth_str.as_str());
+
     let output = installer::run_install(
         &state.docker,
         &config,
         &script,
         &image,
+        panel_url,
+        panel_auth,
     )
     .await?;
 

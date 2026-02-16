@@ -13,6 +13,8 @@ pub async fn run_install(
     server_config: &ServerConfig,
     script: &str,
     install_image: &str,
+    panel_url: Option<&str>,
+    panel_auth: Option<&str>,
 ) -> Result<Vec<String>, WingsError> {
     let container_name = format!("nexus-install-{}", server_config.uuid);
 
@@ -97,6 +99,27 @@ pub async fn run_install(
     if let Some(result) = wait_stream.next().await {
         let wait_result = result.map_err(WingsError::Docker)?;
         if wait_result.status_code != 0 {
+            // Notify Panel of install failure
+            if let (Some(url), Some(auth)) = (panel_url, panel_auth) {
+                let callback_url = format!(
+                    "{}/api/v1/servers/{}/install-status",
+                    url.trim_end_matches('/'),
+                    server_config.uuid
+                );
+                let client = reqwest::Client::new();
+                let last_lines: Vec<String> = output_lines.iter().rev().take(50).rev().cloned().collect();
+                let status_body = serde_json::json!({
+                    "status": "failed",
+                    "message": last_lines.join("\n")
+                });
+                let _ = client
+                    .post(&callback_url)
+                    .header("Authorization", format!("Bearer {auth}"))
+                    .json(&status_body)
+                    .send()
+                    .await;
+            }
+
             let _ = client
                 .remove_container(
                     &container_name,
@@ -113,6 +136,28 @@ pub async fn run_install(
                     wait_result.status_code
                 ),
             )));
+        }
+    }
+
+    // Notify Panel of install success
+    if let (Some(url), Some(auth)) = (panel_url, panel_auth) {
+        let callback_url = format!(
+            "{}/api/v1/servers/{}/install-status",
+            url.trim_end_matches('/'),
+            server_config.uuid
+        );
+        let http_client = reqwest::Client::new();
+        let status_body = serde_json::json!({
+            "status": "success"
+        });
+        if let Err(e) = http_client
+            .post(&callback_url)
+            .header("Authorization", format!("Bearer {auth}"))
+            .json(&status_body)
+            .send()
+            .await
+        {
+            tracing::warn!("Failed to notify Panel of install success: {e}");
         }
     }
 

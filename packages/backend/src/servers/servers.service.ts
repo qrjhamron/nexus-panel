@@ -111,6 +111,12 @@ export class ServersService {
       throw new BadRequestException('Node is offline');
     }
 
+    // Verify Wings is actually reachable
+    const wingsAvailable = await this.wingsService.checkAvailability(node);
+    if (!wingsAvailable) {
+      throw new BadRequestException('Wings daemon is not reachable on this node');
+    }
+
     // 2. Validate egg exists
     const egg = await this.eggRepo.findOne({ where: { id: dto.eggId } });
     if (!egg) {
@@ -178,8 +184,11 @@ export class ServersService {
     // 9. Determine image
     const image = dto.image || egg.dockerImage;
 
-    // 10-11. Create server record, then assign allocation
+    // 10-11. Use transaction for atomic server creation + allocation assignment
     let saved: ServerEntity;
+    const runner = this.serverRepo.manager.connection.createQueryRunner();
+    await runner.connect();
+    await runner.startTransaction();
     try {
       const server = this.serverRepo.create({
         ...dto,
@@ -189,13 +198,15 @@ export class ServersService {
         status: ServerStatus.INSTALLING,
         installed: 0,
       });
-      saved = await this.serverRepo.save(server);
+      saved = await runner.manager.save(server);
+      await runner.manager.update(AllocationEntity, dto.allocationId, { serverId: saved.id });
+      await runner.commitTransaction();
     } catch (error) {
+      await runner.rollbackTransaction();
       throw error;
+    } finally {
+      await runner.release();
     }
-
-    // Assign allocation to server
-    await this.allocationRepo.update(dto.allocationId, { serverId: saved.id });
 
     const fullServer = await this.findById(saved.id);
 
@@ -225,9 +236,7 @@ export class ServersService {
       );
     } catch (error: any) {
       this.logger.error(`Failed to create server on Wings: ${error?.message}`);
-      // Rollback: remove server record and unassign allocation
-      await this.allocationRepo.update(dto.allocationId, { serverId: null as any });
-      await this.serverRepo.remove(saved);
+      await this.serverRepo.update(saved.id, { status: ServerStatus.INSTALL_FAILED });
       throw new BadRequestException(`Failed to create server on Wings: ${error?.message}`);
     }
 
@@ -251,7 +260,7 @@ export class ServersService {
 
     if (server.allocation) {
       await this.allocationRepo.update(server.allocation.id, {
-        serverId: undefined,
+        serverId: null as any,
       });
     }
 
@@ -260,6 +269,14 @@ export class ServersService {
 
   async power(uuid: string, action: PowerAction) {
     const server = await this.findByUuid(uuid);
+
+    if (server.status === ServerStatus.INSTALLING) {
+      throw new BadRequestException('Cannot perform power action on a server that is still installing');
+    }
+    if (server.status === ServerStatus.SUSPENDED) {
+      throw new BadRequestException('Cannot perform power action on a suspended server');
+    }
+
     await this.wingsService.powerAction(server.node, server.uuid, action);
   }
 
@@ -355,5 +372,28 @@ export class ServersService {
     if (server.userId !== userId) {
       throw new ForbiddenException('You do not have access to this server');
     }
+  }
+
+  async updateInstallStatus(uuid: string, status: string, message?: string) {
+    const server = await this.serverRepo.findOne({ where: { uuid } });
+    if (!server) {
+      throw new NotFoundException('Server not found');
+    }
+
+    if (status === 'success') {
+      await this.serverRepo.update(server.id, {
+        installed: 1,
+        status: null as any,
+      });
+      this.logger.log(`Server ${uuid} installation completed successfully`);
+    } else {
+      await this.serverRepo.update(server.id, {
+        installed: 2,
+        status: ServerStatus.INSTALL_FAILED,
+      });
+      this.logger.error(`Server ${uuid} installation failed: ${message || 'unknown error'}`);
+    }
+
+    return { success: true };
   }
 }

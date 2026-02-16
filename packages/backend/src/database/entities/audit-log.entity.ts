@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { UserEntity } from './user.entity';
 
@@ -13,6 +14,7 @@ export class AuditLogEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column({ nullable: true })
   userId?: string;
 
@@ -25,6 +27,7 @@ export class AuditLogEntity {
   @Column({ type: 'jsonb', default: '{}' })
   metadata: Record<string, unknown>;
 
+  @Index()
   @CreateDateColumn()
   createdAt: Date;
 

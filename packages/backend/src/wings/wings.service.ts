@@ -15,7 +15,7 @@ export class WingsService {
 
   private buildHeaders(node: NodeEntity): Record<string, string> {
     return {
-      Authorization: `Bearer ${node.daemonToken}`,
+      Authorization: `Bearer ${node.daemonTokenId}.${node.daemonToken}`,
       'Content-Type': 'application/json',
       Accept: 'application/json',
     };
@@ -223,6 +223,25 @@ export class WingsService {
 
   async unsuspendServer(node: NodeEntity, serverUuid: string): Promise<void> {
     await this.request(node, 'POST', `/servers/${serverUuid}/unsuspend`);
+  }
+
+  async checkAvailability(node: NodeEntity): Promise<boolean> {
+    try {
+      const url = this.buildUrl(node, '/system');
+      const headers = this.buildHeaders(node);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      return response.ok;
+    } catch {
+      return false;
+    }
   }
 
   async reinstallServer(

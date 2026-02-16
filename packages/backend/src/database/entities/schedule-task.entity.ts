@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { ScheduleEntity } from './schedule.entity';
 
@@ -20,6 +21,7 @@ export class ScheduleTaskEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column()
   scheduleId: string;
 

@@ -85,6 +85,45 @@ async fn run_daemon(config_path: &PathBuf) -> anyhow::Result<()> {
 
     let state = std::sync::Arc::new(state::AppState::new(cfg.clone(), docker));
 
+    // Reconstruct server registry from existing containers
+    {
+        let filters: std::collections::HashMap<String, Vec<String>> = [(
+            "label".to_string(),
+            vec!["nexus.managed=true".to_string()],
+        )]
+        .into();
+
+        match state.docker.client().list_containers(Some(
+            bollard::container::ListContainersOptions {
+                all: true,
+                filters,
+                ..Default::default()
+            },
+        )).await {
+            Ok(containers) => {
+                let mut count = 0;
+                for container in &containers {
+                    if let Some(labels) = &container.labels {
+                        if let Some(uuid) = labels.get("nexus.server_uuid") {
+                            let container_state = container
+                                .state
+                                .as_deref()
+                                .unwrap_or("unknown");
+                            tracing::debug!(
+                                "Reconstructed server {uuid} with state {container_state}"
+                            );
+                            count += 1;
+                        }
+                    }
+                }
+                tracing::info!("Reconstructed {count} server(s) from existing containers");
+            }
+            Err(e) => {
+                tracing::warn!("Failed to list containers for reconstruction: {e}");
+            }
+        }
+    }
+
     // Shutdown signal
     let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
 

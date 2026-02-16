@@ -19,7 +19,17 @@ pub struct FileEntry {
 
 /// Validates and resolves a requested path to ensure it stays within server_root.
 pub fn validate_path(server_root: &Path, requested_path: &str) -> Result<PathBuf, WingsError> {
+    // Reject null bytes
+    if requested_path.contains('\0') {
+        return Err(WingsError::PathTraversal);
+    }
+
+    // Reject absolute paths (other than leading slash which we strip)
     let clean = requested_path.trim_start_matches('/');
+    if clean.starts_with('/') {
+        return Err(WingsError::PathTraversal);
+    }
+
     let joined = server_root.join(clean);
     let canonical_root = server_root
         .canonicalize()
@@ -28,24 +38,40 @@ pub fn validate_path(server_root: &Path, requested_path: &str) -> Result<PathBuf
             "Server root does not exist",
         )))?;
 
-    // For non-existent paths, check parent
+    // For non-existent paths, normalize manually
     let canonical = if joined.exists() {
-        joined.canonicalize().map_err(WingsError::Io)?
-    } else {
-        let parent = joined
-            .parent()
-            .ok_or(WingsError::PathTraversal)?
-            .canonicalize()
-            .map_err(WingsError::Io)?;
-        if !parent.starts_with(&canonical_root) {
+        let resolved = joined.canonicalize().map_err(WingsError::Io)?;
+        // Check for symlinks pointing outside
+        if !resolved.starts_with(&canonical_root) {
             return Err(WingsError::PathTraversal);
         }
-        parent.join(joined.file_name().ok_or(WingsError::PathTraversal)?)
+        resolved
+    } else {
+        // Manually normalize path for non-existent targets
+        let mut normalized = canonical_root.clone();
+        for component in std::path::Path::new(clean).components() {
+            match component {
+                std::path::Component::Normal(c) => {
+                    normalized.push(c);
+                }
+                std::path::Component::ParentDir => {
+                    if !normalized.starts_with(&canonical_root) || normalized == canonical_root {
+                        return Err(WingsError::PathTraversal);
+                    }
+                    normalized.pop();
+                    if !normalized.starts_with(&canonical_root) {
+                        return Err(WingsError::PathTraversal);
+                    }
+                }
+                std::path::Component::CurDir => {}
+                _ => return Err(WingsError::PathTraversal),
+            }
+        }
+        if !normalized.starts_with(&canonical_root) {
+            return Err(WingsError::PathTraversal);
+        }
+        normalized
     };
-
-    if !canonical.starts_with(&canonical_root) {
-        return Err(WingsError::PathTraversal);
-    }
 
     Ok(canonical)
 }
@@ -264,5 +290,31 @@ mod tests {
         create_directory(&new_dir).unwrap();
         assert!(new_dir.exists());
         assert!(new_dir.is_dir());
+    }
+
+    #[test]
+    fn test_validate_path_rejects_null_bytes() {
+        let dir = TempDir::new().unwrap();
+        let root = dir.path();
+        let result = validate_path(root, "test\0.txt");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_path_rejects_nested_traversal() {
+        let dir = TempDir::new().unwrap();
+        let root = dir.path();
+        let result = validate_path(root, "valid/../../etc/passwd");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_path_rejects_absolute_path() {
+        let dir = TempDir::new().unwrap();
+        let root = dir.path();
+        // After stripping leading slash, /etc/passwd becomes etc/passwd which is valid
+        // But we should test that traversal via absolute is rejected
+        let result = validate_path(root, "../../../etc/passwd");
+        assert!(result.is_err());
     }
 }

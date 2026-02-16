@@ -7,6 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
   Unique,
+  Index,
 } from 'typeorm';
 import { ServerEntity } from './server.entity';
 import { UserEntity } from './user.entity';
@@ -17,9 +18,11 @@ export class ServerSubuserEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column()
   serverId: string;
 
+  @Index()
   @Column()
   userId: string;
 

@@ -7,6 +7,7 @@ import {
   OneToOne,
   JoinColumn,
   Unique,
+  Index,
 } from 'typeorm';
 import { NodeEntity } from './node.entity';
 import { ServerEntity } from './server.entity';
@@ -17,6 +18,7 @@ export class AllocationEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column()
   nodeId: string;
 
@@ -32,6 +34,7 @@ export class AllocationEntity {
   @Column({ nullable: true })
   notes?: string;
 
+  @Index()
   @Column({ nullable: true })
   serverId?: string;
 

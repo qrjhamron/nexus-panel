@@ -10,6 +10,7 @@ import {
   JoinColumn,
   Generated,
   BeforeInsert,
+  Index,
 } from 'typeorm';
 import { UserEntity } from './user.entity';
 import { NodeEntity } from './node.entity';
@@ -48,15 +49,18 @@ export class ServerEntity {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
+  @Index()
   @Column()
   userId: string;
 
+  @Index()
   @Column()
   nodeId: string;
 
   @Column()
   nestId: string;
 
+  @Index()
   @Column()
   eggId: string;
 

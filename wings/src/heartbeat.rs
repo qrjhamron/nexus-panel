@@ -59,6 +59,27 @@ async fn send_heartbeat(client: &reqwest::Client, state: &AppState) -> anyhow::R
     let (disk_total, disk_used) = read_disk_usage(&config.storage.data_dir);
     let cpu_usage = read_cpu_usage().await;
 
+    // Get server states from Docker
+    let server_states = match state.docker.client().list_containers(Some(
+        bollard::container::ListContainersOptions::<String> {
+            all: true,
+            filters: [("label".to_string(), vec!["nexus.managed=true".to_string()])].into(),
+            ..Default::default()
+        },
+    )).await {
+        Ok(containers) => {
+            containers.iter().filter_map(|c| {
+                let uuid = c.labels.as_ref()?.get("nexus.server_uuid")?.clone();
+                let state = c.state.clone().unwrap_or_else(|| "unknown".to_string());
+                Some(ServerState { uuid, state })
+            }).collect()
+        }
+        Err(e) => {
+            tracing::warn!("Failed to list containers for heartbeat: {e}");
+            Vec::new()
+        }
+    };
+
     let payload = HeartbeatPayload {
         version: env!("CARGO_PKG_VERSION").to_string(),
         total_memory: mem_total,
@@ -66,7 +87,7 @@ async fn send_heartbeat(client: &reqwest::Client, state: &AppState) -> anyhow::R
         total_disk: disk_total,
         used_disk: disk_used,
         cpu_percent: cpu_usage,
-        servers: Vec::new(),
+        servers: server_states,
     };
 
     client

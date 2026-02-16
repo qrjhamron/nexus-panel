@@ -18,11 +18,24 @@ pub async fn auth_middleware(request: Request, next: Next) -> Result<Response, W
         .and_then(|v| v.to_str().ok())
         .ok_or(WingsError::AuthFailed)?;
 
-    let token = auth_header
+    let bearer = auth_header
         .strip_prefix("Bearer ")
         .ok_or(WingsError::AuthFailed)?;
 
-    if token != config.panel.token {
+    // Accept both "token_id.token" and plain "token" formats
+    let provided_token = if let Some(dot_pos) = bearer.find('.') {
+        let tid = &bearer[..dot_pos];
+        let tok = &bearer[dot_pos + 1..];
+        // Verify token_id matches if present
+        if !config.panel.token_id.is_empty() && tid != config.panel.token_id {
+            return Err(WingsError::AuthFailed);
+        }
+        tok
+    } else {
+        bearer
+    };
+
+    if provided_token != config.panel.token {
         return Err(WingsError::AuthFailed);
     }
 

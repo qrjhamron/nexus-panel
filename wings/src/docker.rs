@@ -70,7 +70,9 @@ impl DockerManager {
     }
 
     fn container_name(uuid: &str) -> String {
-        format!("nexus-{uuid}")
+        let short = uuid.replace('-', "");
+        let short = &short[..std::cmp::min(8, short.len())];
+        format!("nexus-{short}")
     }
 
     pub async fn create_server(&self, config: &ServerConfig) -> Result<String, WingsError> {
@@ -119,6 +121,10 @@ impl DockerManager {
 
         let cmd: Vec<&str> = config.startup_command.split_whitespace().collect();
 
+        let mut labels = HashMap::new();
+        labels.insert("nexus.managed".to_string(), "true".to_string());
+        labels.insert("nexus.server_uuid".to_string(), config.uuid.clone());
+
         let container_config = ContainerConfig {
             image: Some(config.docker_image.clone()),
             cmd: Some(cmd.into_iter().map(String::from).collect()),
@@ -131,6 +137,7 @@ impl DockerManager {
             attach_stderr: Some(true),
             tty: Some(true),
             working_dir: Some("/server".to_string()),
+            labels: Some(labels),
             ..Default::default()
         };
 
