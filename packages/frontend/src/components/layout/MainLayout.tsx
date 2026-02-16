@@ -4,7 +4,7 @@ import { Box, useMediaQuery, useTheme } from '@mui/material';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 
-const DRAWER_WIDTH = 260;
+const DRAWER_WIDTH = 240;
 const RAIL_WIDTH = 68;
 
 export function MainLayout() {

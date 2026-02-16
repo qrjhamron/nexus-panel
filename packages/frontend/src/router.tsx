@@ -7,6 +7,7 @@ import { AdminRoute } from './components/auth/AdminRoute';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
+import { ServersPage } from './pages/servers/ServersPage';
 
 import { ConsolePage } from './pages/server/ConsolePage';
 import { FilesPage } from './pages/server/FilesPage';
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
         element: <MainLayout />,
         children: [
           { path: '/dashboard', element: <DashboardPage /> },
+          { path: '/servers', element: <ServersPage /> },
 
           // Server routes
           {

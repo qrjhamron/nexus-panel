@@ -37,7 +37,7 @@ import {
 } from '@mui/icons-material';
 import { useAuthStore } from '../../stores/auth.store';
 
-const DRAWER_WIDTH = 260;
+const DRAWER_WIDTH = 240;
 const RAIL_WIDTH = 68;
 
 interface SidebarProps {
@@ -64,7 +64,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const mainNav: NavItem[] = [
     { label: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { label: 'My Servers', icon: <ServersIcon />, path: '/dashboard' },
+    { label: 'My Servers', icon: <ServersIcon />, path: '/servers' },
   ];
 
   const serverNav: NavItem[] = uuid
@@ -124,7 +124,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         )}
         <List disablePadding>
           {items.map((item) => {
-            const active = location.pathname === item.path;
+            const active =
+              location.pathname === item.path ||
+              (item.path.startsWith('/admin') && location.pathname.startsWith(item.path));
             const btn = (
               <ListItemButton
                 key={item.path}
@@ -134,6 +136,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   minHeight: 40,
                   px: collapsed ? 2.5 : 2,
                   justifyContent: collapsed ? 'center' : 'flex-start',
+                  borderLeft: active ? '3px solid' : '3px solid transparent',
+                  borderLeftColor: active ? 'primary.main' : 'transparent',
                   '&.Mui-selected': {
                     bgcolor: 'action.selected',
                     '&:hover': { bgcolor: 'action.selected' },
