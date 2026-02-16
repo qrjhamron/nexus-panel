@@ -141,9 +141,14 @@ export class ServersService {
       throw new NotFoundException('User not found');
     }
 
-    // 5. Validate memory capacity (considering overallocation)
-    const existingServers = await this.serverRepo.find({ where: { nodeId: dto.nodeId } });
-    const allocatedMemory = existingServers.reduce((sum, s) => sum + s.memory, 0);
+    // 5. Validate memory capacity (considering overallocation) — aggregate query
+    const capacityResult = await this.serverRepo
+      .createQueryBuilder('s')
+      .select('COALESCE(SUM(s.memory), 0)', 'allocatedMemory')
+      .addSelect('COALESCE(SUM(s.disk), 0)', 'allocatedDisk')
+      .where('s.nodeId = :nodeId', { nodeId: dto.nodeId })
+      .getRawOne();
+    const allocatedMemory = Number(capacityResult.allocatedMemory);
     const maxMemory = node.memory * (1 + node.memoryOverallocate / 100);
     if (allocatedMemory + dto.memory > maxMemory) {
       throw new BadRequestException(
@@ -152,7 +157,7 @@ export class ServersService {
     }
 
     // 6. Validate disk capacity (considering overallocation)
-    const allocatedDisk = existingServers.reduce((sum, s) => sum + s.disk, 0);
+    const allocatedDisk = Number(capacityResult.allocatedDisk);
     const maxDisk = node.disk * (1 + node.diskOverallocate / 100);
     if (allocatedDisk + dto.disk > maxDisk) {
       throw new BadRequestException(

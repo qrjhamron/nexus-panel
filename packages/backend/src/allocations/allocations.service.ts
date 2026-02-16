@@ -41,12 +41,18 @@ export class AllocationsService {
       throw new BadRequestException('Cannot create more than 1000 allocations at once');
     }
 
+    // Batch-check existing ports to avoid N+1 queries
+    const ports = Array.from({ length: portEnd - portStart + 1 }, (_, i) => portStart + i);
+    const existing = await this.allocationRepo
+      .createQueryBuilder('a')
+      .select('a.port')
+      .where('a.nodeId = :nodeId AND a.ip = :ip AND a.port IN (:...ports)', { nodeId, ip, ports })
+      .getMany();
+    const existingPorts = new Set(existing.map((a) => a.port));
+
     const allocations: AllocationEntity[] = [];
-    for (let port = portStart; port <= portEnd; port++) {
-      const exists = await this.allocationRepo.findOne({
-        where: { nodeId, ip, port },
-      });
-      if (!exists) {
+    for (const port of ports) {
+      if (!existingPorts.has(port)) {
         allocations.push(
           this.allocationRepo.create({ nodeId, ip, port }),
         );
@@ -81,7 +87,7 @@ export class AllocationsService {
     if (!allocation) {
       throw new NotFoundException('Allocation not found');
     }
-    allocation.serverId = undefined;
+    allocation.serverId = null as any;
     return this.allocationRepo.save(allocation);
   }
 }

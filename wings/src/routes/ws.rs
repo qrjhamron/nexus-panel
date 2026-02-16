@@ -21,8 +21,16 @@ pub async fn ws_handler(
     Query(query): Query<WsQuery>,
     ws: WebSocketUpgrade,
 ) -> Result<impl IntoResponse, WingsError> {
-    // Authenticate via query param token
-    if query.token != state.config.panel.token {
+    // Authenticate via query param token (supports tokenId.token or plain token)
+    let auth_token = &query.token;
+    let valid = if let Some(dot_idx) = auth_token.find('.') {
+        let tid = &auth_token[..dot_idx];
+        let tok = &auth_token[dot_idx + 1..];
+        tid == state.config.panel.token_id && tok == state.config.panel.token
+    } else {
+        auth_token == &state.config.panel.token
+    };
+    if !valid {
         return Err(WingsError::AuthFailed);
     }
 
@@ -70,8 +78,11 @@ async fn handle_ws(socket: WebSocket, state: Arc<AppState>, uuid: String) {
     let (log_tx, mut log_rx) = tokio::sync::mpsc::channel::<String>(128);
 
     let log_task = tokio::spawn(async move {
+        // Use the short container name format matching DockerManager::container_name
+        let short = log_uuid.replace('-', "");
+        let container_name = format!("nexus-{}", &short[..std::cmp::min(8, short.len())]);
         let mut stream = log_state.docker.client().logs::<String>(
-            &format!("nexus-{log_uuid}"),
+            &container_name,
             Some(bollard::container::LogsOptions {
                 follow: true,
                 stdout: true,

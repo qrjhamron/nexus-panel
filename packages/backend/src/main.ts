@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { RequestMethod, ValidationPipe } from '@nestjs/common';
+import { Logger, RequestMethod, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
@@ -7,6 +7,8 @@ import { join, resolve } from 'path';
 import { existsSync } from 'fs';
 import { AppModule } from './app.module';
 import { SpaFallbackFilter } from './common/filters/spa-fallback.filter';
+
+const logger = new Logger('Bootstrap');
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -44,7 +46,7 @@ async function bootstrap() {
   const indexPath = resolve(frontendPath, 'index.html');
   const frontendBuilt = existsSync(indexPath);
   if (!frontendBuilt) {
-    console.warn('WARNING: Frontend build not found at ' + indexPath + '. Run: cd packages/frontend && npm run build');
+    logger.warn('Frontend build not found at ' + indexPath + '. Run: cd packages/frontend && npm run build');
   }
 
   if (frontendBuilt) {
@@ -54,6 +56,6 @@ async function bootstrap() {
   const host = process.env.HOST || '0.0.0.0';
   const port = process.env.PORT || 3000;
   await app.listen(port, host);
-  console.log(`Nexus Panel API running on http://${host}:${port}`);
+  logger.log(`Nexus Panel API running on http://${host}:${port}`);
 }
 bootstrap();

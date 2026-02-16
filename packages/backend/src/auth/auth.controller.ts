@@ -80,7 +80,7 @@ export class AuthController {
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const token = req.cookies?.refreshToken;
     if (!token) {
-      return { statusCode: 401, message: 'No refresh token provided' };
+      throw new UnauthorizedException('No refresh token provided');
     }
     const result = await this.authService.refreshToken(token);
 

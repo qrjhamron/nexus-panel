@@ -138,12 +138,18 @@ async fn run_daemon(config_path: &PathBuf) -> anyhow::Result<()> {
 
     let shutdown_signal = async {
         let ctrl_c = tokio::signal::ctrl_c();
-        let mut sigterm =
-            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-                .expect("failed to install SIGTERM handler");
-        tokio::select! {
-            _ = ctrl_c => { tracing::info!("Received SIGINT"); }
-            _ = sigterm.recv() => { tracing::info!("Received SIGTERM"); }
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut sigterm) => {
+                tokio::select! {
+                    _ = ctrl_c => { tracing::info!("Received SIGINT"); }
+                    _ = sigterm.recv() => { tracing::info!("Received SIGTERM"); }
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to install SIGTERM handler: {e}, falling back to SIGINT only");
+                let _ = ctrl_c.await;
+                tracing::info!("Received SIGINT");
+            }
         }
     };
 

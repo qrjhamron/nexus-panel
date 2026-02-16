@@ -7,6 +7,7 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { NestEntity } from './nest.entity';
 import { EggVariableEntity } from './egg-variable.entity';
@@ -16,6 +17,7 @@ export class EggEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column()
   nestId: string;
 

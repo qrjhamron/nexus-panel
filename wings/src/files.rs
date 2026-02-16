@@ -151,7 +151,7 @@ pub fn compress(paths: &[PathBuf], dest: &Path) -> Result<(), WingsError> {
 
     for path in paths {
         if path.is_dir() {
-            for entry in walkdir::WalkDir::new(path) {
+            for entry in walkdir::WalkDir::new(path).max_depth(64) {
                 let entry = entry.map_err(|e| {
                     WingsError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
                 })?;

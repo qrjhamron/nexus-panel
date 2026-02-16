@@ -4,6 +4,7 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { resolve } from 'path';
@@ -13,6 +14,7 @@ import { existsSync } from 'fs';
 export class SpaFallbackFilter implements ExceptionFilter {
   private readonly indexPath: string;
   private readonly frontendBuilt: boolean;
+  private readonly logger = new Logger(SpaFallbackFilter.name);
 
   constructor() {
     this.indexPath = resolve(__dirname, '../../../../frontend/dist/index.html');
@@ -40,7 +42,7 @@ export class SpaFallbackFilter implements ExceptionFilter {
 
     // For non-HTTP exceptions (real errors), log the stack trace
     if (!(exception instanceof HttpException)) {
-      console.error('Unhandled exception:', exception);
+      this.logger.error('Unhandled exception:', exception);
     }
 
     // For all other exceptions, return JSON error

@@ -61,26 +61,39 @@ export class AdminNodesController {
       take: pp,
     });
 
-    const data = await Promise.all(
-      nodes.map(async (node) => {
-        const serverCount = await this.serverRepo.count({ where: { nodeId: node.id } });
-        const allocCount = node.allocations ? node.allocations.length : 0;
-        const online = this.heartbeatStore.isOnline(node.id);
-        const heartbeat = this.heartbeatStore.get(node.id);
-        return {
-          ...node,
-          serverCount,
-          allocationCount: allocCount,
-          online,
-          memoryUsed: heartbeat?.usedMemory ?? null,
-          memoryTotal: heartbeat?.totalMemory ?? null,
-          diskUsed: heartbeat?.usedDisk ?? null,
-          diskTotal: heartbeat?.totalDisk ?? null,
-          cpuUsage: heartbeat?.cpuPercent ?? null,
-          lastHeartbeat: heartbeat?.receivedAt ?? null,
-        };
-      }),
-    );
+    // Batch-query server counts for all node IDs to avoid N+1
+    const nodeIds = nodes.map((n) => n.id);
+    const serverCounts: Record<string, number> = {};
+    if (nodeIds.length > 0) {
+      const counts = await this.serverRepo
+        .createQueryBuilder('s')
+        .select('s.nodeId', 'nodeId')
+        .addSelect('COUNT(*)::int', 'count')
+        .where('s.nodeId IN (:...nodeIds)', { nodeIds })
+        .groupBy('s.nodeId')
+        .getRawMany();
+      for (const row of counts) {
+        serverCounts[row.nodeId] = row.count;
+      }
+    }
+
+    const data = nodes.map((node) => {
+      const allocCount = node.allocations ? node.allocations.length : 0;
+      const online = this.heartbeatStore.isOnline(node.id);
+      const heartbeat = this.heartbeatStore.get(node.id);
+      return {
+        ...node,
+        serverCount: serverCounts[node.id] || 0,
+        allocationCount: allocCount,
+        online,
+        memoryUsed: heartbeat?.usedMemory ?? null,
+        memoryTotal: heartbeat?.totalMemory ?? null,
+        diskUsed: heartbeat?.usedDisk ?? null,
+        diskTotal: heartbeat?.totalDisk ?? null,
+        cpuUsage: heartbeat?.cpuPercent ?? null,
+        lastHeartbeat: heartbeat?.receivedAt ?? null,
+      };
+    });
 
     return {
       data,

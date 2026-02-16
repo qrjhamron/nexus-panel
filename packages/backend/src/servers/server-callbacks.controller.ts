@@ -6,6 +6,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ServersService } from './servers.service';
@@ -24,6 +25,9 @@ export class ServerCallbacksController {
     @Param('uuid') uuid: string,
     @Body() body: { status: string; message?: string },
   ) {
+    if (!body.status || !['success', 'failed'].includes(body.status)) {
+      throw new BadRequestException('Invalid status: must be "success" or "failed"');
+    }
     return this.serversService.updateInstallStatus(uuid, body.status, body.message);
   }
 }

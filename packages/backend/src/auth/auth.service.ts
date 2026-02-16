@@ -110,6 +110,9 @@ export class AuthService {
     });
     await this.sessionRepo.save(session);
 
+    // Update last login timestamp
+    await this.userRepo.update(user.id, { lastLogin: new Date() });
+
     await this.auditLogService.log({
       userId: user.id,
       event: 'user.login',
@@ -307,6 +310,8 @@ export class AuthService {
       lastActiveAt: new Date(),
     });
     await this.sessionRepo.save(session);
+
+    await this.userRepo.update(user.id, { lastLogin: new Date() });
 
     await this.auditLogService.log({
       userId: user.id,

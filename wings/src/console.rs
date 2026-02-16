@@ -18,7 +18,10 @@ impl ConsoleBuffer {
     }
 
     pub fn push(&self, line: String) {
-        let mut buf = self.inner.lock().unwrap();
+        let mut buf = match self.inner.lock() {
+            Ok(b) => b,
+            Err(poisoned) => poisoned.into_inner(),
+        };
         if buf.len() >= self.capacity {
             buf.pop_front();
         }
@@ -26,7 +29,10 @@ impl ConsoleBuffer {
     }
 
     pub fn lines(&self) -> Vec<String> {
-        let buf = self.inner.lock().unwrap();
+        let buf = match self.inner.lock() {
+            Ok(b) => b,
+            Err(poisoned) => poisoned.into_inner(),
+        };
         buf.iter().cloned().collect()
     }
 }

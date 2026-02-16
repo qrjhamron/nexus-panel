@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { ServerEntity } from './server.entity';
 import { DatabaseHostEntity } from './database-host.entity';
@@ -15,9 +16,11 @@ export class ServerDatabaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column()
   serverId: string;
 
+  @Index()
   @Column()
   databaseHostId: string;
 

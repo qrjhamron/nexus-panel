@@ -7,6 +7,7 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { ServerEntity } from './server.entity';
 import { ScheduleTaskEntity } from './schedule-task.entity';
@@ -16,6 +17,7 @@ export class ScheduleEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column()
   serverId: string;
 
