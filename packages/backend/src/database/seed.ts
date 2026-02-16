@@ -140,8 +140,8 @@ async function seed() {
       name: 'Node.js Generic',
       author: 'support@nexus.local',
       description: 'A generic Node.js application egg.',
-      dockerImage: 'ghcr.io/pterodactyl/yolks:nodejs_21',
-      dockerImages: { 'Node.js 21': 'ghcr.io/pterodactyl/yolks:nodejs_21', 'Node.js 20': 'ghcr.io/pterodactyl/yolks:nodejs_20' },
+      dockerImage: 'ghcr.io/pterodactyl/yolks:nodejs_20',
+      dockerImages: { 'Node.js 20': 'ghcr.io/pterodactyl/yolks:nodejs_20', 'Node.js 18': 'ghcr.io/pterodactyl/yolks:nodejs_18' },
       startup: 'node {{MAIN_FILE}}',
       configStop: '^C',
       scriptInstall: [
@@ -152,7 +152,7 @@ async function seed() {
         'fi',
       ].join('\n'),
       scriptEntry: 'bash',
-      scriptContainer: 'ghcr.io/pterodactyl/yolks:nodejs_21',
+      scriptContainer: 'ghcr.io/pterodactyl/yolks:nodejs_20',
       variables: [
         { name: 'Main File', description: 'The main file to run', envVariable: 'MAIN_FILE', defaultValue: 'index.js', rules: 'required|string' },
         { name: 'Node.js Version', description: 'Node.js version', envVariable: 'NODEJS_VERSION', defaultValue: '21', rules: 'required|string' },
@@ -163,8 +163,8 @@ async function seed() {
       name: 'Python Generic',
       author: 'support@nexus.local',
       description: 'A generic Python application egg.',
-      dockerImage: 'ghcr.io/pterodactyl/yolks:python_3.12',
-      dockerImages: { 'Python 3.12': 'ghcr.io/pterodactyl/yolks:python_3.12', 'Python 3.11': 'ghcr.io/pterodactyl/yolks:python_3.11' },
+      dockerImage: 'ghcr.io/pterodactyl/yolks:python_3.11',
+      dockerImages: { 'Python 3.11': 'ghcr.io/pterodactyl/yolks:python_3.11', 'Python 3.10': 'ghcr.io/pterodactyl/yolks:python_3.10' },
       startup: 'python {{MAIN_FILE}}',
       configStop: '^C',
       scriptInstall: [
@@ -175,7 +175,7 @@ async function seed() {
         'fi',
       ].join('\n'),
       scriptEntry: 'bash',
-      scriptContainer: 'ghcr.io/pterodactyl/yolks:python_3.12',
+      scriptContainer: 'ghcr.io/pterodactyl/yolks:python_3.11',
       variables: [
         { name: 'Main File', description: 'The main Python file to run', envVariable: 'MAIN_FILE', defaultValue: 'main.py', rules: 'required|string' },
         { name: 'Additional Packages', description: 'Additional pip packages to install', envVariable: 'PY_PACKAGES', defaultValue: '', rules: 'nullable|string' },
