@@ -259,7 +259,7 @@ impl DockerManager {
             memory_limit,
             network_rx_bytes: network_rx,
             network_tx_bytes: network_tx,
-            disk_bytes: 0,
+            disk_bytes: 0, // Calculated by caller with server data dir
             timestamp: chrono::Utc::now().to_rfc3339(),
         })
     }

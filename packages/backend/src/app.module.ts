@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import * as Joi from 'joi';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -63,6 +64,7 @@ import { LocationsModule } from './locations/locations.module';
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     AuthModule,
     UsersModule,
     ServersModule,

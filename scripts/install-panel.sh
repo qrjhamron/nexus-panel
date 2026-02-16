@@ -31,8 +31,13 @@ DB_NAME="nexus"
 DB_USER="nexus"
 DB_PASS="$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 32)"
 JWT_SECRET="$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 48)"
+JWT_REFRESH_SECRET="$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 48)"
+ADMIN_EMAIL="${NEXUS_ADMIN_EMAIL:-admin@nexus.local}"
+ADMIN_PASSWORD="$(openssl rand -base64 16 | tr -dc 'A-Za-z0-9' | head -c 16)"
+ADMIN_USERNAME="${NEXUS_ADMIN_USER:-admin}"
 PANEL_PORT=3000
 DOMAIN="${NEXUS_DOMAIN:-_}"  # default: catch-all vhost
+APP_URL="${NEXUS_APP_URL:-http://localhost:${PANEL_PORT}}"
 
 # ── Preflight ────────────────────────────────────────────────────────
 header "Nexus Panel Installer"
@@ -41,13 +46,30 @@ if [[ $EUID -ne 0 ]]; then
     die "This script must be run as root (try: sudo bash $0)"
 fi
 
-if ! grep -qi 'ubuntu' /etc/os-release 2>/dev/null; then
-    warn "This script is designed for Ubuntu 22.04. Proceeding anyway…"
+# Preflight OS check
+SUPPORTED_OS=false
+if grep -qi 'ubuntu' /etc/os-release 2>/dev/null; then
+    OS_VERSION=$(grep VERSION_ID /etc/os-release | tr -dc '0-9.')
+    case "$OS_VERSION" in
+        20.04|22.04|24.04) SUPPORTED_OS=true ;;
+    esac
+fi
+if grep -qi 'debian' /etc/os-release 2>/dev/null; then
+    OS_VERSION=$(grep VERSION_ID /etc/os-release | tr -dc '0-9')
+    case "$OS_VERSION" in
+        11|12) SUPPORTED_OS=true ;;
+    esac
+fi
+
+if [[ "$SUPPORTED_OS" != "true" ]]; then
+    warn "This script is designed for Ubuntu 20.04/22.04/24.04 or Debian 11/12."
+    warn "Proceeding anyway — things may break."
 fi
 
 info "Installation directory : ${INSTALL_DIR}"
 info "Database               : ${DB_NAME}"
 info "Database user          : ${DB_USER}"
+info "Admin email            : ${ADMIN_EMAIL}"
 echo ""
 
 # ── Step 1: System packages ─────────────────────────────────────────
@@ -177,9 +199,16 @@ DB_DATABASE=${DB_NAME}
 
 # JWT
 JWT_SECRET=${JWT_SECRET}
+JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
 
-# Frontend
-FRONTEND_URL=http://localhost:${PANEL_PORT}
+# Application
+APP_URL=${APP_URL}
+APP_PORT=${PANEL_PORT}
+
+# Admin (used only on first run / seed)
+ADMIN_EMAIL=${ADMIN_EMAIL}
+ADMIN_PASSWORD=${ADMIN_PASSWORD}
+ADMIN_USERNAME=${ADMIN_USERNAME}
 
 # Node Environment
 NODE_ENV=production
@@ -313,13 +342,15 @@ header "Installation Complete"
 
 echo -e "${GREEN}${BOLD}Nexus Panel has been installed successfully!${NC}"
 echo ""
-echo -e "${BOLD}Generated Credentials${NC} (save these securely!):"
+echo -e "${BOLD}Generated Credentials${NC} (save these — shown only once!):"
 echo -e "  ┌──────────────────────────────────────────────────────────┐"
-echo -e "  │  Database Host     : ${CYAN}localhost:5432${NC}"
-echo -e "  │  Database Name     : ${CYAN}${DB_NAME}${NC}"
-echo -e "  │  Database User     : ${CYAN}${DB_USER}${NC}"
-echo -e "  │  Database Password : ${CYAN}${DB_PASS}${NC}"
-echo -e "  │  JWT Secret        : ${CYAN}${JWT_SECRET}${NC}"
+echo -e "  │  Panel URL          : ${CYAN}${APP_URL}${NC}"
+echo -e "  │  Admin Email        : ${CYAN}${ADMIN_EMAIL}${NC}"
+echo -e "  │  Admin Password     : ${CYAN}${ADMIN_PASSWORD}${NC}"
+echo -e "  │  Database Host      : ${CYAN}localhost:5432${NC}"
+echo -e "  │  Database Name      : ${CYAN}${DB_NAME}${NC}"
+echo -e "  │  Database User      : ${CYAN}${DB_USER}${NC}"
+echo -e "  │  Database Password  : ${CYAN}${DB_PASS}${NC}"
 echo -e "  └──────────────────────────────────────────────────────────┘"
 echo ""
 echo -e "${BOLD}Service Management:${NC}"
@@ -336,5 +367,7 @@ echo ""
 echo -e "${BOLD}Next Steps:${NC}"
 echo -e "  1. Set your domain in /etc/nginx/sites-available/nexus-panel"
 echo -e "  2. Configure SSL with: ${CYAN}certbot --nginx -d your-domain.com${NC}"
-echo -e "  3. Visit ${CYAN}http://your-server-ip${NC} to access the panel"
+echo -e "  3. Log in at ${CYAN}${APP_URL}${NC} with the admin credentials above"
+echo -e "  4. Add a node: install Wings on a server with:"
+echo -e "     ${CYAN}curl -sSL https://raw.githubusercontent.com/YOUR_ORG/nexus/main/scripts/install-wings.sh | sudo bash${NC}"
 echo ""

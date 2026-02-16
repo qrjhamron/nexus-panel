@@ -103,7 +103,7 @@ async fn send_heartbeat(client: &reqwest::Client, state: &AppState) -> anyhow::R
 }
 
 /// Parse /proc/meminfo for total and used memory (in bytes).
-fn read_memory_info() -> (u64, u64) {
+pub fn read_memory_info() -> (u64, u64) {
     let content = match std::fs::read_to_string("/proc/meminfo") {
         Ok(c) => c,
         Err(_) => return (0, 0),
@@ -133,7 +133,7 @@ fn parse_meminfo_value(s: &str) -> u64 {
 }
 
 /// Get disk usage via statvfs for the data directory.
-fn read_disk_usage(path: &str) -> (u64, u64) {
+pub fn read_disk_usage(path: &str) -> (u64, u64) {
     match nix::sys::statvfs::statvfs(path) {
         Ok(stat) => {
             let total = stat.blocks() * stat.fragment_size();
@@ -145,7 +145,7 @@ fn read_disk_usage(path: &str) -> (u64, u64) {
 }
 
 /// Sample CPU usage from /proc/stat over a short interval.
-async fn read_cpu_usage() -> f64 {
+pub async fn read_cpu_usage() -> f64 {
     let sample = || -> Option<(u64, u64)> {
         let content = std::fs::read_to_string("/proc/stat").ok()?;
         let cpu_line = content.lines().next()?;

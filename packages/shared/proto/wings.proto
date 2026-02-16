@@ -1,0 +1,210 @@
+syntax = "proto3";
+
+package nexus.wings;
+
+// ============================================================================
+// Panel → Wings RPC Service
+// ============================================================================
+service WingsService {
+  // Server lifecycle
+  rpc CreateServer(CreateServerRequest) returns (CreateServerResponse);
+  rpc DeleteServer(DeleteServerRequest) returns (DeleteServerResponse);
+  rpc ReinstallServer(ReinstallServerRequest) returns (ReinstallServerResponse);
+
+  // Power management
+  rpc SendPowerAction(PowerActionRequest) returns (PowerActionResponse);
+
+  // Commands
+  rpc SendCommand(CommandRequest) returns (CommandResponse);
+
+  // Config sync
+  rpc SyncServerConfig(SyncConfigRequest) returns (SyncConfigResponse);
+
+  // Status queries
+  rpc GetServerStatus(ServerStatusRequest) returns (ServerStatusResponse);
+  rpc GetSystemInfo(SystemInfoRequest) returns (SystemInfoResponse);
+
+  // Resource updates
+  rpc UpdateResources(UpdateResourcesRequest) returns (UpdateResourcesResponse);
+
+  // Event streaming: Wings pushes events to Panel
+  rpc EventStream(stream WingsEvent) returns (stream PanelCommand);
+}
+
+// ============================================================================
+// Enums
+// ============================================================================
+enum PowerAction {
+  POWER_START = 0;
+  POWER_STOP = 1;
+  POWER_RESTART = 2;
+  POWER_KILL = 3;
+}
+
+enum ServerState {
+  STATE_OFFLINE = 0;
+  STATE_STARTING = 1;
+  STATE_RUNNING = 2;
+  STATE_STOPPING = 3;
+  STATE_UNKNOWN = 4;
+}
+
+enum InstallStatus {
+  INSTALL_SUCCESS = 0;
+  INSTALL_FAILED = 1;
+}
+
+// ============================================================================
+// Server Config (shared between create/sync/reinstall)
+// ============================================================================
+message ServerConfig {
+  string uuid = 1;
+  string docker_image = 2;
+  string startup_command = 3;
+  map<string, string> environment = 4;
+  uint64 memory_limit_mb = 5;
+  uint32 cpu_limit = 6;
+  uint64 disk_limit_mb = 7;
+  repeated PortMapping port_mappings = 8;
+  string volume_path = 9;
+}
+
+message PortMapping {
+  uint32 host_port = 1;
+  uint32 container_port = 2;
+}
+
+// ============================================================================
+// Request / Response Messages
+// ============================================================================
+message CreateServerRequest {
+  ServerConfig server = 1;
+  string install_script = 2;
+  string install_docker_image = 3;
+}
+
+message CreateServerResponse {
+  string container_id = 1;
+  string uuid = 2;
+}
+
+message DeleteServerRequest {
+  string uuid = 1;
+  bool remove_volumes = 2;
+}
+
+message DeleteServerResponse {}
+
+message ReinstallServerRequest {
+  ServerConfig server = 1;
+  string install_script = 2;
+  string install_docker_image = 3;
+}
+
+message ReinstallServerResponse {}
+
+message PowerActionRequest {
+  string uuid = 1;
+  PowerAction action = 2;
+}
+
+message PowerActionResponse {}
+
+message CommandRequest {
+  string uuid = 1;
+  string command = 2;
+}
+
+message CommandResponse {}
+
+message SyncConfigRequest {
+  ServerConfig server = 1;
+}
+
+message SyncConfigResponse {}
+
+message ServerStatusRequest {
+  string uuid = 1;
+}
+
+message ServerStatusResponse {
+  string uuid = 1;
+  ServerState state = 2;
+  ResourceStats resources = 3;
+}
+
+message SystemInfoRequest {}
+
+message SystemInfoResponse {
+  string version = 1;
+  string docker_version = 2;
+  uint64 total_memory = 3;
+  uint64 used_memory = 4;
+  uint64 total_disk = 5;
+  uint64 used_disk = 6;
+  double cpu_percent = 7;
+  uint32 server_count = 8;
+}
+
+message UpdateResourcesRequest {
+  string uuid = 1;
+  uint64 memory_limit_mb = 2;
+  uint32 cpu_limit = 3;
+  uint64 disk_limit_mb = 4;
+}
+
+message UpdateResourcesResponse {}
+
+// ============================================================================
+// Event Streaming Messages
+// ============================================================================
+message WingsEvent {
+  oneof event {
+    ServerStateChanged state_changed = 1;
+    ServerInstallComplete install_complete = 2;
+    ServerInstallFailed install_failed = 3;
+    ResourceStats resource_stats = 4;
+    ConsoleOutput console_output = 5;
+  }
+}
+
+message PanelCommand {
+  // Reserved for future Panel→Wings streaming commands (e.g., broadcast messages)
+  string command_type = 1;
+  bytes payload = 2;
+}
+
+message ServerStateChanged {
+  string uuid = 1;
+  ServerState previous_state = 2;
+  ServerState new_state = 3;
+  int64 timestamp_ms = 4;
+}
+
+message ServerInstallComplete {
+  string uuid = 1;
+  int64 timestamp_ms = 2;
+}
+
+message ServerInstallFailed {
+  string uuid = 1;
+  string error_message = 2;
+  int64 timestamp_ms = 3;
+}
+
+message ResourceStats {
+  string uuid = 1;
+  double cpu_percent = 2;
+  uint64 memory_bytes = 3;
+  uint64 memory_limit = 4;
+  uint64 network_rx_bytes = 5;
+  uint64 network_tx_bytes = 6;
+  uint64 disk_bytes = 7;
+  int64 timestamp_ms = 8;
+}
+
+message ConsoleOutput {
+  string uuid = 1;
+  string line = 2;
+  int64 timestamp_ms = 3;
+}

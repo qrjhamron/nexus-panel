@@ -25,6 +25,8 @@ const OWNER_EVENTS = new Set([
   'server.install.failed',
   'server.created',
   'server.deleted',
+  'server.stats',
+  'server.console',
 ]);
 
 @Injectable()

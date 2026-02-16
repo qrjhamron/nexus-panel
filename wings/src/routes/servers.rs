@@ -20,6 +20,7 @@ pub struct CommandRequest {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 pub struct ResourceUpdate {
     pub memory_limit: Option<u64>,
     pub cpu_limit: Option<u64>,
@@ -142,15 +143,28 @@ pub async fn send_command(
 }
 
 pub async fn update_resources(
-    State(_state): State<Arc<AppState>>,
-    AxumPath(_uuid): AxumPath<String>,
-    Json(_body): Json<ResourceUpdate>,
+    State(state): State<Arc<AppState>>,
+    AxumPath(uuid): AxumPath<String>,
+    Json(body): Json<ResourceUpdate>,
 ) -> Result<Json<serde_json::Value>, WingsError> {
-    // Docker container resource updates require recreating the container or using the update API.
-    // For now, acknowledge the request; live update support can be added later.
+    tracing::info!(uuid = %uuid, "Updating container resources");
+
+    let short = uuid.replace('-', "");
+    let container_name = format!("nexus-{}", &short[..std::cmp::min(8, short.len())]);
+
+    let update_config = bollard::container::UpdateContainerOptions::<String> {
+        memory: body.memory_limit.map(|m| (m * 1024 * 1024) as i64),
+        nano_cpus: body.cpu_limit.map(|c| (c as i64) * 10_000_000),
+        ..Default::default()
+    };
+
+    state.docker.client().update_container(&container_name, update_config)
+        .await
+        .map_err(WingsError::Docker)?;
+
     Ok(Json(serde_json::json!({
         "success": true,
-        "message": "Resource limits will apply on next restart"
+        "message": "Resource limits updated"
     })))
 }
 

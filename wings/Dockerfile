@@ -1,34 +1,26 @@
-# Stage 1: Build
-FROM rust:1.83 AS builder
+# Stage 1: Build static musl binary
+FROM rust:1.93-alpine AS builder
+RUN apk add --no-cache musl-dev protobuf-dev git
 
 WORKDIR /build
+COPY wings/Cargo.toml wings/Cargo.lock* wings/build.rs wings/
+COPY wings/src/ wings/src/
+COPY packages/shared/proto/ packages/shared/proto/
 
-COPY Cargo.toml Cargo.lock* ./
-COPY src/ ./src/
+# Clear .cargo/config.toml — Alpine gcc links against musl natively
+RUN mkdir -p /build/wings/.cargo && echo '' > /build/wings/.cargo/config.toml
 
+WORKDIR /build/wings
 RUN cargo build --release
 
-# Stage 2: Runtime
-FROM debian:bookworm-slim
+# Stage 2: Minimal runtime
+FROM alpine:3.21
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ca-certificates \
-        curl \
-        gnupg && \
-    install -m 0755 -d /etc/apt/keyrings && \
-    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
-    chmod a+r /etc/apt/keyrings/docker.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable" \
-        > /etc/apt/sources.list.d/docker.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends docker-ce-cli && \
-    rm -rf /var/lib/apt/lists/*
+COPY --from=builder /build/wings/target/release/nexus-wings /usr/local/bin/nexus-wings
 
-COPY --from=builder /build/target/release/nexus-wings /usr/local/bin/nexus-wings
+RUN mkdir -p /etc/nexus /var/lib/nexus/data && \
+    nexus-wings version
 
-RUN mkdir -p /etc/nexus-wings /var/lib/nexus-wings/data
-
-EXPOSE 8080
+EXPOSE 8080 8081
 
 ENTRYPOINT ["nexus-wings"]

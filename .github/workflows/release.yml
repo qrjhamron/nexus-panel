@@ -17,45 +17,42 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: x86_64-unknown-linux-gnu
-            arch: amd64
-            os: ubuntu-latest
-          - target: aarch64-unknown-linux-gnu
-            arch: arm64
-            os: ubuntu-latest
-    runs-on: ${{ matrix.os }}
+          - arch: amd64
+            platform: linux/amd64
+          - arch: arm64
+            platform: linux/arm64
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Install cross-compilation tools
-        if: matrix.arch == 'arm64'
+      - name: Build Wings static binary in Alpine
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          docker buildx build \
+            --platform ${{ matrix.platform }} \
+            --target builder \
+            --output type=local,dest=./out \
+            -f wings/Dockerfile .
+          cp out/build/wings/target/release/nexus-wings wings_linux_${{ matrix.arch }}
+          chmod +x wings_linux_${{ matrix.arch }}
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: wings
-          key: ${{ matrix.target }}
-
-      - name: Build Wings
-        run: cd wings && cargo build --release --target ${{ matrix.target }}
-        env:
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-
-      - name: Rename binary
+      - name: Verify binary
+        if: matrix.arch == 'amd64'
         run: |
-          cp wings/target/${{ matrix.target }}/release/nexus-wings \
-             nexus-wings-linux-${{ matrix.arch }}
+          file wings_linux_${{ matrix.arch }}
+          ldd wings_linux_${{ matrix.arch }} 2>&1 | grep -q "statically linked"
+          ./wings_linux_${{ matrix.arch }} version
+
+      - name: Generate SHA256 checksum
+        run: sha256sum wings_linux_${{ matrix.arch }} > wings_linux_${{ matrix.arch }}.sha256
 
       - uses: actions/upload-artifact@v4
         with:
-          name: nexus-wings-linux-${{ matrix.arch }}
-          path: nexus-wings-linux-${{ matrix.arch }}
+          name: wings_linux_${{ matrix.arch }}
+          path: |
+            wings_linux_${{ matrix.arch }}
+            wings_linux_${{ matrix.arch }}.sha256
 
   create-release:
     needs: build-wings
@@ -72,8 +69,10 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            artifacts/nexus-wings-linux-amd64/nexus-wings-linux-amd64
-            artifacts/nexus-wings-linux-arm64/nexus-wings-linux-arm64
+            artifacts/wings_linux_amd64/wings_linux_amd64
+            artifacts/wings_linux_amd64/wings_linux_amd64.sha256
+            artifacts/wings_linux_arm64/wings_linux_arm64
+            artifacts/wings_linux_arm64/wings_linux_arm64.sha256
 
   docker-images:
     needs: create-release
@@ -89,7 +88,7 @@ jobs:
             context: .
           - image: nexus-wings
             dockerfile: wings/Dockerfile
-            context: ./wings
+            context: .
     steps:
       - uses: actions/checkout@v4
 

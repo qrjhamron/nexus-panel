@@ -15,12 +15,19 @@ fn main() {
     let timestamp = chrono_lite_now();
     println!("cargo:rustc-env=BUILD_TIMESTAMP={timestamp}");
 
-    // Re-run if git HEAD changes
+    // Compile protobuf definitions
+    let proto_path = "../packages/shared/proto/wings.proto";
+    tonic_build::configure()
+        .build_server(true)
+        .build_client(false)
+        .compile_protos(&[proto_path], &["../packages/shared/proto"])
+        .expect("Failed to compile proto files");
+
+    println!("cargo:rerun-if-changed={proto_path}");
     println!("cargo:rerun-if-changed=.git/HEAD");
 }
 
 fn chrono_lite_now() -> String {
-    // Use the `date` command to avoid pulling in chrono at build time
     Command::new("date")
         .args(["-u", "+%Y-%m-%dT%H:%M:%SZ"])
         .output()

@@ -41,7 +41,7 @@ case "$ARCH" in
 esac
 
 # Placeholder download URL — replace with actual release URL
-DOWNLOAD_URL="https://github.com/YOUR_ORG/nexus/releases/latest/download/nexus-wings-linux-${ARCH}"
+DOWNLOAD_URL="https://github.com/YOUR_ORG/nexus/releases/latest/download/wings_linux_${ARCH}"
 
 # ── Preflight ────────────────────────────────────────────────────────
 header "Nexus Wings Installer"
@@ -50,8 +50,23 @@ if [[ $EUID -ne 0 ]]; then
     die "This script must be run as root (try: sudo bash $0)"
 fi
 
-if ! grep -qi 'ubuntu' /etc/os-release 2>/dev/null; then
-    warn "This script is designed for Ubuntu 22.04. Proceeding anyway…"
+SUPPORTED_OS=false
+if grep -qi 'ubuntu' /etc/os-release 2>/dev/null; then
+    OS_VERSION=$(grep VERSION_ID /etc/os-release | tr -dc '0-9.')
+    case "$OS_VERSION" in
+        20.04|22.04|24.04) SUPPORTED_OS=true ;;
+    esac
+fi
+if grep -qi 'debian' /etc/os-release 2>/dev/null; then
+    OS_VERSION=$(grep VERSION_ID /etc/os-release | tr -dc '0-9')
+    case "$OS_VERSION" in
+        11|12) SUPPORTED_OS=true ;;
+    esac
+fi
+
+if [[ "$SUPPORTED_OS" != "true" ]]; then
+    warn "This script is designed for Ubuntu 20.04/22.04/24.04 or Debian 11/12."
+    warn "Proceeding anyway — things may break."
 fi
 
 # ── Step 1: Docker ───────────────────────────────────────────────────
@@ -183,8 +198,7 @@ Requires=docker.service
 
 [Service]
 Type=simple
-User=${WINGS_USER}
-ExecStart=${WINGS_BINARY}
+ExecStart=${WINGS_BINARY} daemon --config ${CONFIG_DIR}/wings.toml
 Restart=on-failure
 RestartSec=5
 StartLimitIntervalSec=600
@@ -220,11 +234,14 @@ echo -e "${BOLD}Next Steps:${NC}"
 echo -e "  1. Configure Wings by running:"
 echo -e "     ${CYAN}nexus-wings configure${NC}"
 echo -e ""
-echo -e "     Or create ${CYAN}${CONFIG_DIR}/config.toml${NC} manually with your"
-echo -e "     Panel URL and authentication token."
+echo -e "     This will ask for your Panel URL and node token."
+echo -e "     Get the token from Panel → Admin → Nodes → Create Node."
 echo -e ""
 echo -e "  2. Start the service:"
 echo -e "     ${CYAN}systemctl start nexus-wings${NC}"
+echo -e ""
+echo -e "  3. Verify the node is online:"
+echo -e "     ${CYAN}nexus-wings diagnostics --config ${CONFIG_DIR}/wings.toml${NC}"
 echo ""
 echo -e "${BOLD}Service Management:${NC}"
 echo -e "  Start  : ${CYAN}systemctl start nexus-wings${NC}"

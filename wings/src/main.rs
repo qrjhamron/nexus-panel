@@ -4,7 +4,8 @@ mod console;
 mod docker;
 mod error;
 mod files;
-mod heartbeat;
+pub mod grpc;
+pub mod heartbeat;
 mod installer;
 mod routes;
 mod server;
@@ -35,8 +36,24 @@ enum Commands {
     Version,
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
+    // Spawn the main logic on a thread with 8MB stack for musl compatibility
+    // (musl default main thread stack is 128KB, causing segfaults with deep stacks)
+    let builder = std::thread::Builder::new()
+        .stack_size(8 * 1024 * 1024)
+        .name("nexus-main".to_string());
+    let handler = builder.spawn(|| {
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .thread_stack_size(8 * 1024 * 1024)
+            .build()
+            .expect("Failed to build tokio runtime");
+        rt.block_on(async_main())
+    }).expect("Failed to spawn main thread");
+    handler.join().expect("Main thread panicked")
+}
+
+async fn async_main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
@@ -110,7 +127,9 @@ async fn run_daemon(config_path: &PathBuf) -> anyhow::Result<()> {
                                 .as_deref()
                                 .unwrap_or("unknown");
                             tracing::debug!(
-                                "Reconstructed server {uuid} with state {container_state}"
+                                uuid = %uuid,
+                                state = container_state,
+                                "Reconstructed server from Docker"
                             );
                             count += 1;
                         }
@@ -128,12 +147,35 @@ async fn run_daemon(config_path: &PathBuf) -> anyhow::Result<()> {
     let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
 
     // Start heartbeat
-    heartbeat::start(state.clone(), shutdown_rx);
+    heartbeat::start(state.clone(), shutdown_rx.clone());
 
-    // Build router and serve
+    // Create gRPC event channel
+    let (event_tx, _event_rx) = grpc::create_event_channel();
+
+    // Start gRPC server
+    let grpc_port = cfg.api.port + 1; // gRPC on next port (e.g., 8081)
+    let grpc_addr = format!("{}:{}", cfg.api.host, grpc_port).parse()?;
+    let grpc_service = grpc::WingsGrpcService::new(state.clone(), event_tx);
+    let grpc_shutdown_rx = shutdown_rx.clone();
+
+    tokio::spawn(async move {
+        tracing::info!("gRPC server listening on {grpc_addr}");
+        if let Err(e) = tonic::transport::Server::builder()
+            .add_service(grpc::proto::wings_service_server::WingsServiceServer::new(grpc_service))
+            .serve_with_shutdown(grpc_addr, async move {
+                let mut rx = grpc_shutdown_rx;
+                let _ = rx.changed().await;
+            })
+            .await
+        {
+            tracing::error!("gRPC server error: {e}");
+        }
+    });
+
+    // Build HTTP router and serve
     let app = server::build_router(state);
     let addr = format!("{}:{}", cfg.api.host, cfg.api.port);
-    tracing::info!("Nexus Wings listening on {addr}");
+    tracing::info!("Nexus Wings HTTP listening on {addr}");
     let listener = tokio::net::TcpListener::bind(&addr).await?;
 
     let shutdown_signal = async {
@@ -164,7 +206,7 @@ async fn run_daemon(config_path: &PathBuf) -> anyhow::Result<()> {
     // Signal heartbeat and other tasks to stop
     let _ = shutdown_tx.send(());
 
-    // Allow in-progress work to drain (up to 10s)
+    // Allow in-progress work to drain (up to 1s)
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
     tracing::info!("Nexus Wings shutdown complete");
@@ -267,7 +309,17 @@ async fn run_diagnostics(config_path: &PathBuf) -> anyhow::Result<()> {
 
             // Check Panel connectivity
             print!("Panel connectivity... ");
-            println!("SKIPPED (requires HTTP client)");
+            let panel_url = format!("{}/api/v1/health", cfg.panel.url.trim_end_matches('/'));
+            match reqwest::Client::new()
+                .get(&panel_url)
+                .timeout(std::time::Duration::from_secs(5))
+                .send()
+                .await
+            {
+                Ok(resp) if resp.status().is_success() => println!("OK ({})", cfg.panel.url),
+                Ok(resp) => println!("WARNING (status {})", resp.status()),
+                Err(e) => println!("FAILED ({e})"),
+            }
 
             // Check data directory
             print!("Data directory... ");
