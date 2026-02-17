@@ -33,8 +33,8 @@ jobs:
       - run: npm run typecheck -w packages/shared
       - run: npm run build -w packages/shared
       - run: npm run typecheck -w packages/backend
-      - run: npm run lint -w packages/backend || true
-      - run: npm run test -w packages/backend || true
+      - run: npm run lint -w packages/backend
+      - run: npm run test -w packages/backend
         env:
           DB_HOST: localhost
           DB_PORT: 5432
@@ -55,8 +55,8 @@ jobs:
       - run: npm ci
       - run: npm run build -w packages/shared
       - run: npm run typecheck -w packages/frontend
-      - run: npm run lint -w packages/frontend || true
-      - run: npm run test -w packages/frontend -- --update || true
+      - run: npm run lint -w packages/frontend
+      - run: npm run test -w packages/frontend
       - run: npm run build -w packages/frontend
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'

@@ -26,11 +26,9 @@ describe('DashboardPage', () => {
     expect(screen.getByText(/your servers/i)).toBeInTheDocument();
   });
 
-  it('renders search input', () => {
+  it('renders welcome message', () => {
     renderWithProviders(<DashboardPage />);
 
-    expect(
-      screen.getByPlaceholderText(/search servers/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/welcome back/i)).toBeInTheDocument();
   });
 });

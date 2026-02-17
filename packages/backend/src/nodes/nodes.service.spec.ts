@@ -88,7 +88,7 @@ describe('NodesService', () => {
       expect(nodeRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           ...dto,
-          daemonToken: 'hashed-daemon-token',
+          daemonToken: 'generated-daemon-token',
         }),
       );
       expect(result.node).toBeDefined();

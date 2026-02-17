@@ -13,7 +13,7 @@ import { NodeHeartbeatStore } from '../nodes/node-heartbeat.store';
 
 describe('ServersService', () => {
   let service: ServersService;
-  let serverRepo: Record<string, jest.Mock>;
+  let serverRepo: any;
   let allocationRepo: Record<string, jest.Mock>;
   let eggRepo: Record<string, jest.Mock>;
   let eggVariableRepo: Record<string, jest.Mock>;
@@ -64,16 +64,36 @@ describe('ServersService', () => {
     orderBy: jest.fn().mockReturnThis(),
     skip: jest.fn().mockReturnThis(),
     take: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
     getManyAndCount: jest.fn().mockResolvedValue([[mockServer], 1]),
+    getRawOne: jest.fn().mockResolvedValue({ allocatedMemory: '0', allocatedDisk: '0' }),
   };
 
   beforeEach(async () => {
+    const mockQueryRunner = {
+      connect: jest.fn(),
+      startTransaction: jest.fn(),
+      commitTransaction: jest.fn(),
+      rollbackTransaction: jest.fn(),
+      release: jest.fn(),
+      manager: {
+        save: jest.fn((entity) => Promise.resolve({ id: 'server-1', uuid: 'srv-uuid-1', ...entity })),
+        update: jest.fn(() => Promise.resolve()),
+      },
+    };
+
     serverRepo = {
       findOne: jest.fn(),
       create: jest.fn((dto) => ({ id: 'server-1', uuid: 'srv-uuid-1', ...dto })),
       save: jest.fn((entity) => Promise.resolve({ id: 'server-1', uuid: 'srv-uuid-1', ...entity })),
       remove: jest.fn(() => Promise.resolve()),
       createQueryBuilder: jest.fn(() => mockQueryBuilder),
+      manager: {
+        connection: {
+          createQueryRunner: jest.fn(() => mockQueryRunner),
+        },
+      },
     };
     allocationRepo = {
       update: jest.fn(() => Promise.resolve()),
@@ -96,6 +116,7 @@ describe('ServersService', () => {
       powerAction: jest.fn(() => Promise.resolve()),
       sendCommand: jest.fn(() => Promise.resolve()),
       getServerStatus: jest.fn(() => Promise.resolve({ state: 'running' })),
+      checkAvailability: jest.fn(() => Promise.resolve(true)),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -205,7 +226,7 @@ describe('ServersService', () => {
 
       const result = await service.create(dto as any);
 
-      expect(serverRepo.save).toHaveBeenCalled();
+      expect(serverRepo.create).toHaveBeenCalled();
       expect(wingsService.createServer).toHaveBeenCalled();
       expect(result).toBeDefined();
     });
@@ -222,7 +243,7 @@ describe('ServersService', () => {
         'srv-uuid-1',
       );
       expect(allocationRepo.update).toHaveBeenCalledWith('alloc-1', {
-        serverId: undefined,
+        serverId: null,
       });
       expect(serverRepo.remove).toHaveBeenCalledWith(mockServer);
     });

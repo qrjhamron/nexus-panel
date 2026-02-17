@@ -46,6 +46,7 @@ describe('AuthService', () => {
       findOne: jest.fn(),
       create: jest.fn((dto) => ({ ...dto })),
       save: jest.fn((entity) => Promise.resolve({ id: 'user-1', ...entity })),
+      update: jest.fn(() => Promise.resolve()),
     };
     sessionRepo = {
       findOne: jest.fn(),
