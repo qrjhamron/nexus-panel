@@ -41,7 +41,7 @@ case "$ARCH" in
 esac
 
 # Placeholder download URL — replace with actual release URL
-DOWNLOAD_URL="https://github.com/YOUR_ORG/nexus/releases/latest/download/wings_linux_${ARCH}"
+DOWNLOAD_URL="https://github.com/qrjhamron/nexus-panel/releases/latest/download/wings_linux_${ARCH}"
 
 # ── Preflight ────────────────────────────────────────────────────────
 header "Nexus Wings Installer"

@@ -20,7 +20,6 @@ pub struct CommandRequest {
 }
 
 #[derive(Deserialize)]
-#[allow(dead_code)]
 pub struct ResourceUpdate {
     pub memory_limit: Option<u64>,
     pub cpu_limit: Option<u64>,

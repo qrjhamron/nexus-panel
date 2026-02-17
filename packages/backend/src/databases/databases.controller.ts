@@ -14,7 +14,7 @@ import { DatabasesService } from './databases.service';
 import { ServersService } from '../servers/servers.service';
 import { CreateDatabaseDto } from './dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CurrentUser, AuthUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('databases')
 @ApiBearerAuth()
@@ -30,7 +30,7 @@ export class DatabasesController {
   @ApiOperation({ summary: 'List databases for a server' })
   async findByServer(
     @Param('uuid') uuid: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.serversService.findByUuid(uuid);
     this.serversService.checkAccess(server, user.id, user.rootAdmin);
@@ -42,7 +42,7 @@ export class DatabasesController {
   async create(
     @Param('uuid') uuid: string,
     @Body() dto: CreateDatabaseDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.serversService.findByUuid(uuid);
     this.serversService.checkAccess(server, user.id, user.rootAdmin);
@@ -55,7 +55,7 @@ export class DatabasesController {
   async delete(
     @Param('uuid') uuid: string,
     @Param('id') id: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.serversService.findByUuid(uuid);
     this.serversService.checkAccess(server, user.id, user.rootAdmin);

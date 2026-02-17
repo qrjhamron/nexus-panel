@@ -2,7 +2,7 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { SearchService } from './search.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CurrentUser, AuthUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('search')
 @ApiBearerAuth()
@@ -16,7 +16,7 @@ export class SearchController {
   @ApiQuery({ name: 'q', required: true })
   async search(
     @Query('q') query: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const isAdmin = user.rootAdmin;
     return this.searchService.globalSearch(query, user.id, isAdmin);

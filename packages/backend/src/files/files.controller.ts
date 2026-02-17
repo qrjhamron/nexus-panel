@@ -22,7 +22,7 @@ import {
   DeleteFilesDto,
 } from './dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CurrentUser, AuthUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('files')
 @ApiBearerAuth()
@@ -46,7 +46,7 @@ export class FilesController {
   async listDirectory(
     @Param('uuid') uuid: string,
     @Query('path') path: string = '/',
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.getServerWithAccess(uuid, user);
     return this.filesService.listDirectory(server.node, server.uuid, path);
@@ -58,7 +58,7 @@ export class FilesController {
   async readFile(
     @Param('uuid') uuid: string,
     @Query('path') path: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.getServerWithAccess(uuid, user);
     return this.filesService.readFile(server.node, server.uuid, path);
@@ -69,7 +69,7 @@ export class FilesController {
   async writeFile(
     @Param('uuid') uuid: string,
     @Body() dto: WriteFileDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.getServerWithAccess(uuid, user);
     await this.filesService.writeFile(
@@ -86,7 +86,7 @@ export class FilesController {
   async createDirectory(
     @Param('uuid') uuid: string,
     @Body() dto: CreateDirectoryDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.getServerWithAccess(uuid, user);
     await this.filesService.createDirectory(
@@ -102,7 +102,7 @@ export class FilesController {
   async rename(
     @Param('uuid') uuid: string,
     @Body() dto: RenameFileDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.getServerWithAccess(uuid, user);
     await this.filesService.rename(
@@ -119,7 +119,7 @@ export class FilesController {
   async deleteFiles(
     @Param('uuid') uuid: string,
     @Body() dto: DeleteFilesDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.getServerWithAccess(uuid, user);
     await this.filesService.deleteFiles(server.node, server.uuid, dto.paths);
@@ -131,7 +131,7 @@ export class FilesController {
   async compress(
     @Param('uuid') uuid: string,
     @Body() dto: CompressFilesDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.getServerWithAccess(uuid, user);
     await this.filesService.compress(
@@ -148,7 +148,7 @@ export class FilesController {
   async decompress(
     @Param('uuid') uuid: string,
     @Body() dto: DecompressArchiveDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.getServerWithAccess(uuid, user);
     await this.filesService.decompress(
@@ -168,7 +168,7 @@ export class FilesController {
     @Param('uuid') uuid: string,
     @Query('path') path: string = '/',
     @UploadedFile() file: any,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.getServerWithAccess(uuid, user);
     const content = file.buffer.toString('utf-8');

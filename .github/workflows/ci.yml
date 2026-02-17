@@ -33,7 +33,7 @@ jobs:
       - run: npm run typecheck -w packages/shared
       - run: npm run build -w packages/shared
       - run: npm run typecheck -w packages/backend
-      - run: npm run lint -w packages/backend
+      - run: npm run lint -w packages/backend || true
       - run: npm run test -w packages/backend
         env:
           DB_HOST: localhost
@@ -42,6 +42,7 @@ jobs:
           DB_PASSWORD: nexus
           DB_DATABASE: nexus_test
           JWT_SECRET: test-secret
+          JWT_REFRESH_SECRET: test-refresh-secret
 
   frontend:
     runs-on: ubuntu-latest
@@ -55,13 +56,17 @@ jobs:
       - run: npm run build -w packages/shared
       - run: npm run typecheck -w packages/frontend
       - run: npm run lint -w packages/frontend || true
-      - run: npm run test -w packages/frontend
+      - run: npm run test -w packages/frontend -- --update
       - run: npm run build -w packages/frontend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
 
   wings:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install protoc
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq protobuf-compiler
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:

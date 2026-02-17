@@ -15,7 +15,7 @@ import { SubusersService } from './subusers.service';
 import { ServersService } from '../servers/servers.service';
 import { InviteSubuserDto, UpdateSubuserDto } from './dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CurrentUser, AuthUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('subusers')
 @ApiBearerAuth()
@@ -37,7 +37,7 @@ export class SubusersController {
   @ApiOperation({ summary: 'List subusers of a server' })
   async findByServer(
     @Param('uuid') uuid: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.getServerWithAccess(uuid, user);
     return this.subusersService.findByServer(server.id);
@@ -48,7 +48,7 @@ export class SubusersController {
   async invite(
     @Param('uuid') uuid: string,
     @Body() dto: InviteSubuserDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.getServerWithAccess(uuid, user);
     return this.subusersService.invite(
@@ -64,7 +64,7 @@ export class SubusersController {
     @Param('uuid') uuid: string,
     @Param('id') id: string,
     @Body() dto: UpdateSubuserDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     await this.getServerWithAccess(uuid, user);
     return this.subusersService.update(id, dto.permissions);
@@ -76,7 +76,7 @@ export class SubusersController {
   async remove(
     @Param('uuid') uuid: string,
     @Param('id') id: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     await this.getServerWithAccess(uuid, user);
     return this.subusersService.remove(id);

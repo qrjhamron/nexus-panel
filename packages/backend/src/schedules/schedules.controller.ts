@@ -15,7 +15,7 @@ import { SchedulesService } from './schedules.service';
 import { ServersService } from '../servers/servers.service';
 import { CreateScheduleDto, UpdateScheduleDto } from './dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CurrentUser, AuthUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('schedules')
 @ApiBearerAuth()
@@ -37,7 +37,7 @@ export class SchedulesController {
   @ApiOperation({ summary: 'List schedules for a server' })
   async findByServer(
     @Param('uuid') uuid: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.getServerWithAccess(uuid, user);
     return this.schedulesService.findByServer(server.id);
@@ -48,7 +48,7 @@ export class SchedulesController {
   async findById(
     @Param('uuid') uuid: string,
     @Param('id') id: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     await this.getServerWithAccess(uuid, user);
     return this.schedulesService.findById(id);
@@ -59,7 +59,7 @@ export class SchedulesController {
   async create(
     @Param('uuid') uuid: string,
     @Body() dto: CreateScheduleDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.getServerWithAccess(uuid, user);
     return this.schedulesService.create(server.id, dto);
@@ -71,7 +71,7 @@ export class SchedulesController {
     @Param('uuid') uuid: string,
     @Param('id') id: string,
     @Body() dto: UpdateScheduleDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     await this.getServerWithAccess(uuid, user);
     return this.schedulesService.update(id, dto);
@@ -83,7 +83,7 @@ export class SchedulesController {
   async delete(
     @Param('uuid') uuid: string,
     @Param('id') id: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     await this.getServerWithAccess(uuid, user);
     return this.schedulesService.delete(id);
@@ -95,7 +95,7 @@ export class SchedulesController {
   async execute(
     @Param('uuid') uuid: string,
     @Param('id') id: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     await this.getServerWithAccess(uuid, user);
     return this.schedulesService.executeSchedule(id);

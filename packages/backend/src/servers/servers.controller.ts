@@ -23,7 +23,7 @@ import {
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CurrentUser, AuthUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('servers')
 @ApiBearerAuth()
@@ -38,7 +38,7 @@ export class ServersController {
   @ApiQuery({ name: 'perPage', required: false })
   @ApiQuery({ name: 'search', required: false })
   async findAll(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Query('page') page?: number,
     @Query('perPage') perPage?: number,
     @Query('search') search?: string,
@@ -57,7 +57,7 @@ export class ServersController {
   @ApiOperation({ summary: 'Get server by UUID' })
   async findByUuid(
     @Param('uuid') uuid: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.serversService.findByUuid(uuid);
     this.serversService.checkAccess(server, user.id, user.rootAdmin === true);
@@ -76,7 +76,7 @@ export class ServersController {
   async update(
     @Param('uuid') uuid: string,
     @Body() dto: UpdateServerDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.serversService.findByUuid(uuid);
     this.serversService.checkAccess(server, user.id, user.rootAdmin === true);
@@ -97,7 +97,7 @@ export class ServersController {
   async power(
     @Param('uuid') uuid: string,
     @Body() dto: PowerActionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.serversService.findByUuid(uuid);
     this.serversService.checkAccess(server, user.id, user.rootAdmin === true);
@@ -111,7 +111,7 @@ export class ServersController {
   async sendCommand(
     @Param('uuid') uuid: string,
     @Body() dto: ConsoleCommandDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const server = await this.serversService.findByUuid(uuid);
     this.serversService.checkAccess(server, user.id, user.rootAdmin === true);
