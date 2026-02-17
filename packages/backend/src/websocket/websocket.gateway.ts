@@ -65,8 +65,12 @@ export class NexusWebSocketGateway
     for (const serverUuid of serverUuids) {
       try {
         const server = await this.serversService.findByUuid(serverUuid);
-        const stats = await this.wingsService.getServerStatus(server.node, serverUuid);
-        this.emitStatsUpdate(serverUuid, stats);
+        const status = await this.wingsService.getServerStatus(server.node, serverUuid);
+        this.emitStatsUpdate(serverUuid, status);
+        // Also emit power state from the status response
+        if (status?.state !== undefined) {
+          this.emitPowerState(serverUuid, status.state);
+        }
       } catch (error: any) {
         this.logger.debug(`Stats poll failed for ${serverUuid}: ${error?.message}`);
       }
@@ -110,6 +114,31 @@ export class NexusWebSocketGateway
       console: false,
       stats: false,
     });
+
+    // Auto-authenticate from cookie if available
+    try {
+      const cookies = client.handshake?.headers?.cookie || '';
+      const sessionMatch = cookies.match(/nexus_session=([^;]+)/);
+      const token = sessionMatch?.[1];
+      if (token) {
+        const payload = this.jwtService.verify(token);
+        client.userId = payload.sub;
+        const serverUuid = client.handshake?.query?.server as string;
+        if (serverUuid) {
+          client.serverUuid = serverUuid;
+          client.join(`server:${serverUuid}`);
+          const subs = this.clientSubscriptions.get(client.id);
+          if (subs) {
+            subs.console = true;
+            subs.stats = true;
+          }
+          client.emit('message', { type: ServerMessageType.AUTH_SUCCESS });
+          this.logger.debug(`Auto-auth for ${client.id} on server ${serverUuid}`);
+        }
+      }
+    } catch {
+      this.logger.debug(`Cookie auth failed for ${client.id}, waiting for explicit auth`);
+    }
   }
 
   handleDisconnect(client: AuthenticatedSocket) {
